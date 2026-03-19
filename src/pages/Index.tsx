@@ -10,6 +10,7 @@ import RiskProfile from "@/components/landing/RiskProfile";
 import SentimentGauge from "@/components/landing/SentimentGauge";
 import AIReasonerPanel from "@/components/landing/AIReasonerPanel";
 import PricingSection from "@/components/landing/PricingSection";
+import PerformanceSection from "@/components/landing/PerformanceSection";
 import Footer from "@/components/landing/Footer";
 
 const Index = () => {
