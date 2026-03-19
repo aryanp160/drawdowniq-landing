@@ -10,6 +10,7 @@ import RiskProfile from "@/components/landing/RiskProfile";
 import SentimentGauge from "@/components/landing/SentimentGauge";
 import AIReasonerPanel from "@/components/landing/AIReasonerPanel";
 import PricingSection from "@/components/landing/PricingSection";
+import PerformanceSection from "@/components/landing/PerformanceSection";
 import Footer from "@/components/landing/Footer";
 
 const Index = () => {
@@ -45,9 +46,10 @@ const Index = () => {
               </h1>
 
               <p className="mt-8 text-base text-muted-foreground max-w-lg leading-relaxed reveal-up reveal-delay-3">
-                Institutional-grade market signals powered by liquidity analysis
-                and volatility models. Built for the next generation of
-                professional trading workstation.
+                Identify high-probability long/short opportunities before the market moves. Powered by liquidity analysis and volatility models.
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground/70 font-mono tracking-wide reveal-up reveal-delay-3">
+                Built for both independent traders and advanced market participants.
               </p>
             </div>
 
@@ -85,7 +87,12 @@ const Index = () => {
             <AIReasonerPanel />
           </div>
 
-          {/* Row 5: Pricing */}
+          {/* Row 5: Performance */}
+          <div className="mb-6">
+            <PerformanceSection />
+          </div>
+
+          {/* Row 6: Pricing */}
           <div className="mb-10">
             <PricingSection />
           </div>

@@ -34,7 +34,7 @@ const SignalPanel = () => (
     </div>
 
     <button className="w-full py-3 bg-primary text-primary-foreground font-mono text-xs tracking-[0.2em] rounded font-semibold hover:brightness-110 transition-all">
-      INITIALIZE TRADE POSITION
+      GET ACCESS TO SIGNALS
     </button>
   </div>
 );
