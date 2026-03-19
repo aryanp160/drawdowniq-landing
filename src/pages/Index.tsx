@@ -87,7 +87,12 @@ const Index = () => {
             <AIReasonerPanel />
           </div>
 
-          {/* Row 5: Pricing */}
+          {/* Row 5: Performance */}
+          <div className="mb-6">
+            <PerformanceSection />
+          </div>
+
+          {/* Row 6: Pricing */}
           <div className="mb-10">
             <PricingSection />
           </div>
