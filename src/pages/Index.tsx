@@ -45,9 +45,10 @@ const Index = () => {
               </h1>
 
               <p className="mt-8 text-base text-muted-foreground max-w-lg leading-relaxed reveal-up reveal-delay-3">
-                Institutional-grade market signals powered by liquidity analysis
-                and volatility models. Built for the next generation of
-                professional trading workstation.
+                Identify high-probability long/short opportunities before the market moves. Powered by liquidity analysis and volatility models.
+              </p>
+              <p className="mt-3 text-xs text-muted-foreground/70 font-mono tracking-wide reveal-up reveal-delay-3">
+                Built for both independent traders and advanced market participants.
               </p>
             </div>
 
