@@ -14,7 +14,10 @@ const PerformanceSection = () => (
           RECENT SIGNAL PERFORMANCE
         </h3>
         <p className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground mt-1 uppercase">
-          Last 14 days • Verified Outcomes
+          Based on closed signals (last 14 days)
+        </p>
+        <p className="font-mono text-[10px] tracking-[0.1em] text-primary mt-1 font-semibold">
+          Avg Return: +6% per signal
         </p>
       </div>
       <span className="px-3 py-1 rounded border border-primary/30 bg-primary/5 font-mono text-[10px] tracking-[0.15em] text-primary">

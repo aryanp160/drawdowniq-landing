@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 const plans = [
   {
     name: "SIGNALS",
@@ -52,12 +54,17 @@ const PricingSection = () => (
       {plans.map((plan) => (
         <div
           key={plan.name}
-          className={`rounded-lg border p-6 flex flex-col ${
+          className={`rounded-lg border p-6 flex flex-col relative ${
             plan.highlighted
               ? "border-primary bg-primary/5"
               : "border-border bg-panel-2"
           }`}
         >
+          {plan.highlighted && (
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold font-mono px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">
+              Most Popular
+            </div>
+          )}
           <div className="mb-4">
             <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
               {plan.name}
@@ -76,13 +83,14 @@ const PricingSection = () => (
             ))}
           </ul>
           <button
-            className={`w-full py-2.5 font-mono text-xs tracking-[0.2em] rounded font-semibold transition-all ${
+            onClick={() => toast.success("Redirecting to secure checkout...")}
+            className={`w-full py-2.5 font-mono text-xs tracking-[0.2em] rounded font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
               plan.highlighted
                 ? "bg-primary text-primary-foreground hover:brightness-110"
                 : "border border-border text-foreground hover:bg-panel-2"
             }`}
           >
-            START SUBSCRIPTION
+            UNLOCK LIVE SIGNALS
           </button>
         </div>
       ))}

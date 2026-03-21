@@ -1,3 +1,5 @@
+import { toast } from "sonner";
+
 const Navbar = () => (
   <nav className="fixed top-0 left-0 right-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
     <div className="max-w-[1440px] mx-auto flex items-center justify-between px-6 h-14">
@@ -14,7 +16,7 @@ const Navbar = () => (
         {["TERMINAL", "ALPHA", "INTELLIGENCE", "PRICING"].map((item) => (
           <button
             key={item}
-            className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-colors rounded"
+            className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] rounded"
           >
             {item}
           </button>
@@ -26,8 +28,11 @@ const Navbar = () => (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           CMD + K
         </div>
-        <button className="px-4 py-1.5 bg-primary text-primary-foreground font-mono text-xs tracking-widest rounded font-semibold hover:brightness-110 transition-all">
-          GO LIVE
+        <button 
+          onClick={() => toast.success("Redirecting to secure checkout...")}
+          className="px-4 py-1.5 bg-primary text-primary-foreground font-mono text-xs tracking-widest rounded font-semibold hover:brightness-110 transition-all duration-200 hover:scale-[1.05] active:scale-[0.95]"
+        >
+          UNLOCK LIVE SIGNALS
         </button>
       </div>
     </div>
