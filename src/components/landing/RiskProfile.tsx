@@ -2,7 +2,7 @@ const RiskProfile = () => {
   const blocks = [1, 1, 1, 0.9, 0.6, 0.2, 0.1, 0.05, 0.05, 0.02];
 
   return (
-    <div className="panel-glow panel-float p-5 reveal-up reveal-delay-6">
+    <div className="panel-glow panel-float p-5 reveal-up reveal-delay-6 h-full flex flex-col justify-between">
       <div className="flex items-center justify-between mb-4">
         <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
           Current Risk Profile

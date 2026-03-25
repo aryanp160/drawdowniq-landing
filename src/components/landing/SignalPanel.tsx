@@ -1,6 +1,17 @@
-import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
-const SignalPanel = () => (
+const SignalPanel = () => {
+  const { currentUser, userProfile } = useAuth();
+  const navigate = useNavigate();
+
+  const handleCTA = () => {
+    if (!currentUser) navigate('/login');
+    else if (userProfile?.subscriptionStatus !== 'active') navigate('/pricing');
+    else navigate('/terminal');
+  };
+
+  return (
   <div className="panel-glow panel-glow-accent panel-float p-5 w-full max-w-sm reveal-up reveal-delay-3">
     <div className="flex items-center justify-between mb-4">
       <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">Target Asset</span>
@@ -36,7 +47,7 @@ const SignalPanel = () => (
     </div>
 
     <button
-      onClick={() => toast.success("Redirecting to secure checkout...")}
+      onClick={handleCTA}
       className="w-full py-3 bg-primary text-primary-foreground font-mono text-xs tracking-[0.2em] rounded font-semibold hover:brightness-110 transition-all"
     >
       UNLOCK LIVE SIGNALS
@@ -45,6 +56,7 @@ const SignalPanel = () => (
       Limited access — signals updated daily. New users capped each week.
     </p>
   </div>
-);
+  );
+};
 
 export default SignalPanel;

@@ -1,9 +1,29 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+
 const ConfidenceGauge = () => {
-  const confidence = 74;
+  const [confidence, setConfidence] = useState(74);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    const moveGauge = () => {
+      setConfidence(prev => {
+        const change = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+        let next = prev + change;
+        if(next < 70) next = 70;
+        if(next > 80) next = 80;
+        return next;
+      });
+      timeoutId = setTimeout(moveGauge, Math.random() * 3000 + 4000); // 4-7s
+    };
+    timeoutId = setTimeout(moveGauge, 4000);
+    return () => clearTimeout(timeoutId);
+  }, []);
+
   const angle = (confidence / 100) * 180 - 90;
 
   return (
-    <div className="panel-glow panel-float-delayed p-5 reveal-up reveal-delay-4">
+    <div className="panel-glow panel-float-delayed p-5 reveal-up reveal-delay-4 h-full flex flex-col justify-between">
       <div className="flex items-center justify-between mb-4">
         <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
           Confidence Score
@@ -22,20 +42,24 @@ const ConfidenceGauge = () => {
             strokeLinecap="round"
           />
           {/* Value arc */}
-          <path
+          <motion.path
             d="M 20 100 A 80 80 0 0 1 180 100"
             fill="none"
             stroke="url(#gaugeGradient)"
             strokeWidth="12"
             strokeLinecap="round"
-            strokeDasharray={`${(confidence / 100) * 251.2} 251.2`}
+            animate={{ strokeDasharray: `${(confidence / 100) * 251.2} 251.2` }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
           />
           {/* Needle */}
-          <line
+          <motion.line
             x1="100"
             y1="100"
-            x2={100 + 55 * Math.cos((angle * Math.PI) / 180)}
-            y2={100 + 55 * Math.sin((angle * Math.PI) / 180)}
+            animate={{
+              x2: 100 + 55 * Math.cos((angle * Math.PI) / 180),
+              y2: 100 + 55 * Math.sin((angle * Math.PI) / 180)
+            }}
+            transition={{ duration: 1.5, ease: "easeInOut" }}
             stroke="hsl(162 100% 50%)"
             strokeWidth="2"
             strokeLinecap="round"

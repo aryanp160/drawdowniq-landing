@@ -153,7 +153,7 @@
   50% { opacity: 0.3; }
 }
 .pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: pulse-dot 4s ease-in-out infinite;
 }
 
 /* Gauge sweep */
@@ -169,7 +169,7 @@
   100% { transform: translateY(100%); opacity: 0; }
 }
 .scan-line {
-  animation: scan-line 3s ease-in-out infinite;
+  animation: scan-line 6s ease-in-out infinite;
 }
 
 /* Blink */
@@ -178,7 +178,7 @@
   50% { opacity: 0; }
 }
 .blink {
-  animation: blink 1s step-end infinite;
+  animation: blink 3s ease-in-out infinite;
 }
 
 /* Scrollbar styling */

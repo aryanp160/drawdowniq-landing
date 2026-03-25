@@ -2,14 +2,8 @@ import { motion } from "framer-motion";
 import Navbar from "@/components/landing/Navbar";
 import MarketTicker from "@/components/landing/MarketTicker";
 import SignalPanel from "@/components/landing/SignalPanel";
-import TrustPanel from "@/components/landing/TrustPanel";
-import AccuracyPanel from "@/components/landing/AccuracyPanel";
-import ConfidenceGauge from "@/components/landing/ConfidenceGauge";
-import VolatilityRadar from "@/components/landing/VolatilityRadar";
-import LiveFeed from "@/components/landing/LiveFeed";
-import RiskProfile from "@/components/landing/RiskProfile";
-import SentimentGauge from "@/components/landing/SentimentGauge";
-import AIReasonerPanel from "@/components/landing/AIReasonerPanel";
+import SystemStatusBadge from "@/components/landing/SystemStatusBadge";
+import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import PricingSection from "@/components/landing/PricingSection";
 import HowItWorksSection from "@/components/landing/HowItWorksSection";
 import PerformanceSection from "@/components/landing/PerformanceSection";
@@ -33,10 +27,7 @@ const Index = () => {
             {/* Hero - top left */}
             <div className="pt-6">
               <div className="reveal-up reveal-delay-1 mb-6">
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-primary/30 bg-primary/5 font-mono text-[10px] tracking-[0.2em] text-primary">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary pulse-dot" />
-                  SECURE NODE INFRASTRUCTURE ACTIVE
-                </span>
+                <SystemStatusBadge />
               </div>
 
               <h1 className="font-display text-5xl md:text-7xl lg:text-8xl font-extrabold text-foreground leading-[0.9] tracking-tight reveal-up reveal-delay-2 uppercase">
@@ -64,51 +55,10 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Row 2: Trust + Accuracy */}
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }} 
-            whileInView={{ opacity: 1, y: 0 }} 
-            viewport={{ once: true, margin: "-50px" }} 
-            transition={{ duration: 0.5 }}
-            className="grid md:grid-cols-2 lg:grid-cols-[1fr_1fr_380px] gap-6 mb-6"
-          >
-            <TrustPanel />
-            <AccuracyPanel />
-            {/* Live Feed starts here and spans rows */}
-            <div className="row-span-2 hidden lg:block">
-              <LiveFeed />
-            </div>
-          </motion.div>
-
-          {/* Row 3: Gauge + Radar */}
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }} 
-            whileInView={{ opacity: 1, y: 0 }} 
-            viewport={{ once: true, margin: "-50px" }} 
-            transition={{ duration: 0.5 }}
-            className="grid md:grid-cols-2 lg:grid-cols-[1fr_1.5fr] gap-6 mb-6 lg:max-w-[calc(100%-404px)]"
-          >
-            <ConfidenceGauge />
-            <VolatilityRadar />
-          </motion.div>
-
-          {/* Mobile Live Feed */}
-          <div className="lg:hidden mb-6">
-            <LiveFeed />
+          {/* Structured Dashboard Grid */}
+          <div className="mb-10">
+            <DashboardGrid variant="preview" isLocked={true} />
           </div>
-
-          {/* Row 4: Risk + Sentiment + AI Reasoner */}
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }} 
-            whileInView={{ opacity: 1, y: 0 }} 
-            viewport={{ once: true, margin: "-50px" }} 
-            transition={{ duration: 0.5 }}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6"
-          >
-            <RiskProfile />
-            <SentimentGauge />
-            <AIReasonerPanel />
-          </motion.div>
 
           {/* Row 5: Performance */}
           <motion.div 

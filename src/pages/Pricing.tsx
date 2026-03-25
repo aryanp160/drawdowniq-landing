@@ -1,0 +1,166 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth, UserProfile } from "@/contexts/AuthContext";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import Navbar from "@/components/landing/Navbar";
+import Footer from "@/components/landing/Footer";
+import { motion, AnimatePresence } from "framer-motion";
+
+const plans = [
+  { name: "SIGNALS", price: "$17", period: "/mo", highlighted: false, features: ["5–10 weekly high-probability signals", "Market direction bias", "Risk level indicators", "Weekly market outlook"] },
+  { name: "TRADER", price: "$29", period: "/mo", highlighted: true, supportingLine: "Structured daily execution plan — not just signals", features: ["Everything in Signals", "Daily trading plan (market bias, key levels, watchlist)", "Daily trade setups", "Entry & exit zones", "Volatility + liquidity analysis"] },
+  { name: "ELITE", price: "$199", period: "/mo", highlighted: false, isComingSoon: true, features: ["Everything in Trader", "Personalized portfolio plan", "Custom risk model", "Private insights dashboard"] },
+];
+
+const Pricing = () => {
+  const { currentUser, userProfile } = useAuth();
+  const navigate = useNavigate();
+  const [processingState, setProcessingState] = useState<"idle" | "processing" | "success">("idle");
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+
+  const handleSubscribe = async (planName: string) => {
+    if (!currentUser) {
+      navigate('/login');
+      return;
+    }
+
+    setSelectedPlan(planName);
+    setProcessingState("processing");
+
+    // Mock 2-3 sec payment delay
+    setTimeout(async () => {
+      try {
+        const userRef = doc(db, 'users', currentUser.uid);
+        const expiresAt = new Date();
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+
+        await updateDoc(userRef, {
+          plan: planName.toLowerCase() as UserProfile['plan'],
+          subscriptionStatus: 'active',
+          expiresAt: expiresAt
+        });
+
+        setProcessingState("success");
+        setTimeout(() => {
+          navigate('/terminal');
+        }, 1500);
+      } catch (err) {
+        setProcessingState("idle");
+      }
+    }, 2500);
+  };
+
+  return (
+    <div className="min-h-screen bg-background noise-overlay flex flex-col relative text-foreground">
+      <Navbar />
+
+      <AnimatePresence>
+        {processingState !== "idle" && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none"
+          >
+            <div className="flex flex-col items-center gap-4 text-center">
+              {processingState === "processing" ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-primary border-t-transparent animate-spin mb-2" />
+                  <h2 className="font-display text-2xl font-bold uppercase tracking-widest text-primary">
+                    Processing Network Auth...
+                  </h2>
+                  <p className="font-mono text-xs text-muted-foreground uppercase opacity-70">
+                    Securing payment vector
+                  </p>
+                </>
+              ) : (
+                <>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-green-500 mb-2"><path d="M20 6 9 17l-5-5"/></svg>
+                  <h2 className="font-display text-2xl font-bold uppercase tracking-widest text-green-500">
+                    Subscription Activated
+                  </h2>
+                  <p className="font-mono text-xs text-muted-foreground uppercase animate-pulse">
+                    Redirecting to terminal...
+                  </p>
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex-1 pt-24 px-6 max-w-[1440px] mx-auto pb-10 w-full">
+        <div className="mb-12 text-center max-w-2xl mx-auto">
+          <h1 className="font-display text-4xl md:text-5xl font-bold uppercase mb-4 tracking-tight">
+            Scalable Alpha
+          </h1>
+          <p className="text-base text-muted-foreground">
+            Join the most advanced quantitative intelligence community in the world.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          {plans.map((plan) => (
+            <div
+              key={plan.name}
+              className={`rounded-lg border p-6 flex flex-col relative ${
+                plan.highlighted ? "border-primary bg-primary/5" : "border-border bg-panel-2"
+              }`}
+            >
+              {plan.highlighted && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold font-mono px-3 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/20">
+                  Most Popular
+                </div>
+              )}
+              <div className="mb-6">
+                <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+                  {plan.name}
+                </span>
+                <div className="mt-2 flex items-baseline gap-2 relative">
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-display text-4xl font-bold">{plan.price}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{plan.period}</span>
+                  </div>
+                  {/* @ts-ignore */}
+                  {plan.isComingSoon && (
+                    <span className="text-[9px] text-muted-foreground/70 uppercase tracking-widest border border-border/30 bg-panel px-1.5 py-0.5 rounded leading-none opacity-80">
+                      Coming Soon
+                    </span>
+                  )}
+                </div>
+              </div>
+              {/* @ts-ignore */}
+              {plan.supportingLine && (
+                <div className="mb-4 pb-4 border-b border-border/50 text-center">
+                  <span className="text-[10px] text-primary tracking-widest uppercase font-mono">{plan.supportingLine}</span>
+                </div>
+              )}
+              <ul className="space-y-3 mb-8 flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground font-mono">
+                    <span className="text-primary mt-0.5">›</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                disabled={processingState !== "idle"}
+                onClick={() => handleSubscribe(plan.name)}
+                className={`w-full py-3 font-mono text-xs tracking-[0.2em] rounded font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                  plan.highlighted
+                    ? "bg-primary text-primary-foreground hover:brightness-110"
+                    : "border border-border text-foreground hover:bg-panel-2"
+                }`}
+              >
+                {userProfile?.plan.toUpperCase() === plan.name ? "CURRENT PLAN" : "UNLOCK LIVE SIGNALS"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+      <Footer />
+    </div>
+  );
+};
+
+export default Pricing;
