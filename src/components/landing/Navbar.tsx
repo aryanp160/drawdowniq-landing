@@ -32,12 +32,6 @@ const Navbar = () => {
           <Link to="/terminal" className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] rounded">
             TERMINAL
           </Link>
-          <button className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] rounded">
-            ALPHA
-          </button>
-          <button className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] rounded">
-            INTELLIGENCE
-          </button>
           <Link to="/pricing" className="px-4 py-1.5 text-xs font-mono tracking-widest text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-[1.05] active:scale-[0.95] rounded">
             PRICING
           </Link>

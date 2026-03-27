@@ -30,6 +30,12 @@ const SignalCard = ({
   const finalStatus = liveStatus || status || 'RUNNING';
   const finalReturn = expReturn || "+0.0%";
 
+  // Risk Reward Calculation
+  const entryAvg = (entryLow + entryHigh) / 2;
+  const riskReward = isLong 
+    ? Math.abs((tp - entryAvg) / (entryAvg - sl)).toFixed(1)
+    : Math.abs((entryAvg - tp) / (sl - entryAvg)).toFixed(1);
+
   // Countdown Logic
   const [timeLeft, setTimeLeft] = useState<string>("--h --m");
 
@@ -80,11 +86,14 @@ const SignalCard = ({
               {isBlurred ? "---" : direction}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 mt-1">
             <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Confidence</span>
             <span className="text-foreground font-semibold text-sm leading-none">{isBlurred ? "--" : confidence}</span>
             <span className="text-[10px] text-muted-foreground uppercase opacity-40 ml-1">|</span>
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Leverage</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">R:R</span>
+            <span className="text-foreground font-semibold text-sm leading-none">{isBlurred ? "-.-" : `1:${riskReward}`}</span>
+            <span className="text-[10px] text-muted-foreground uppercase opacity-40 ml-1">|</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Lev</span>
             <span className="text-foreground font-semibold text-sm leading-none">{leverage}x</span>
           </div>
         </div>
@@ -146,17 +155,17 @@ const SignalCard = ({
         {finalStatus === 'TP_HIT' ? (
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-            <span className="text-[10.5px] uppercase tracking-widest text-green-500 font-bold">{isBlurred ? "UNKNOWN" : "TP HIT"}</span>
+            <span className="text-[10.5px] uppercase tracking-widest text-green-500 font-bold">{isBlurred ? "UNKNOWN" : "TARGET ACHIEVED"}</span>
           </div>
         ) : finalStatus === 'SL_HIT' ? (
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
-            <span className="text-[10.5px] uppercase tracking-widest text-destructive font-bold">{isBlurred ? "UNKNOWN" : "SL HIT"}</span>
+            <span className="text-[10.5px] uppercase tracking-widest text-destructive font-bold">{isBlurred ? "UNKNOWN" : "STOPPED OUT"}</span>
           </div>
         ) : (
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_4px_rgba(255,255,255,0.8)] animate-pulse" />
-            <span className="text-[10.5px] uppercase tracking-widest text-foreground font-bold">{isBlurred ? "UNKNOWN" : "RUNNING"}</span>
+            <span className="text-[10.5px] uppercase tracking-widest text-foreground font-bold">{isBlurred ? "UNKNOWN" : "ACTIVE POSITION"}</span>
           </div>
         )}
         <span className={`text-xs font-semibold ${finalStatus === 'TP_HIT' ? 'text-green-500' : finalStatus === 'SL_HIT' ? 'text-destructive' : 'text-primary'}`}>

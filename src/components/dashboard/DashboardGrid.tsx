@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Link } from "react-router-dom";
@@ -25,6 +25,7 @@ const assetToCoinGeckoId: Record<string, string> = {
 const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }: DashboardGridProps) => {
   const [trades, setTrades] = useState<any[]>([]);
   const [prices, setPrices] = useState<Record<string, number>>({});
+  const [isClosedTradesOpen, setIsClosedTradesOpen] = useState(false);
 
   useEffect(() => {
     // We enforce 100% dynamic loading over the static grids globally now
@@ -145,35 +146,87 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
       {!isLocked && previousTrades.length > 0 && (
         <div className="mt-8 border-t border-border/50 pt-6 reveal-up">
-          <h3 className="font-display font-bold text-[11px] text-muted-foreground uppercase tracking-[0.2em] mb-4">Previous Executions</h3>
-          <div className="flex flex-col gap-2.5">
-            {previousTrades.map((trade) => (
-              <div key={trade.id} className="panel-glow px-4 py-3 rounded border border-border bg-panel-2/50 flex items-center justify-between text-xs font-mono">
-                <div className="flex items-center gap-4">
-                  <span className="font-display font-bold text-sm text-foreground w-12">{trade.asset}</span>
-                  <span className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase ${trade.direction === 'LONG' || trade.direction === 'BUY' ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-destructive/10 text-destructive border border-destructive/20'}`}>
-                    {trade.direction} x{trade.leverage}
-                  </span>
-                </div>
-                <div className="flex items-center gap-6">
-                  {trade.liveStatus === 'TP_HIT' ? (
-                    <span className="text-green-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                      TP HIT
-                    </span>
-                  ) : (
-                    <span className="text-destructive font-bold uppercase tracking-widest text-[10px] flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-destructive shadow-[0_0_5px_rgba(239,68,68,0.5)]" />
-                      SL HIT
-                    </span>
+          {(() => {
+            const totalTrades = previousTrades.length;
+            const winningTrades = previousTrades.filter(t => t.liveStatus === 'TP_HIT').length;
+            const winRate = totalTrades > 0 ? Math.round((winningTrades / totalTrades) * 100) : 0;
+            const validReturns = previousTrades.map(t => parseFloat(t.expReturn.replace('+', '').replace('%', ''))).filter(n => !isNaN(n));
+            const avgReturn = validReturns.length > 0 ? (validReturns.reduce((a,b) => a + b, 0) / validReturns.length).toFixed(1) : "0.0";
+            
+            return (
+              <>
+                <button 
+                  onClick={() => setIsClosedTradesOpen(!isClosedTradesOpen)}
+                  className="w-full flex items-center justify-between p-4 rounded border border-border bg-panel hover:bg-panel-2 transition-all group"
+                >
+                  <div className="flex flex-col items-start gap-1">
+                    <h3 className="font-display font-bold text-sm text-foreground uppercase tracking-[0.2em] group-hover:text-primary transition-colors">Closed Trades</h3>
+                    <span className="text-[10px] text-muted-foreground font-mono uppercase tracking-[0.1em]">Based on executed signals</span>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    {/* Stats Row */}
+                    <div className="hidden sm:flex items-center gap-6 mr-4 opacity-80">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none mb-1.5">Win Rate</span>
+                        <span className={`font-mono font-bold text-xs leading-none ${winRate >= 50 ? 'text-green-500' : 'text-foreground'}`}>{winRate}%</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none mb-1.5">Avg Return</span>
+                        <span className={`font-mono font-bold text-xs leading-none ${parseFloat(avgReturn) >= 0 ? 'text-green-500' : 'text-destructive'}`}>
+                          {parseFloat(avgReturn) > 0 ? '+' : ''}{avgReturn}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none mb-1.5">Total</span>
+                        <span className="font-mono font-bold text-xs leading-none text-foreground">{totalTrades}</span>
+                      </div>
+                    </div>
+                    <svg 
+                      width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" 
+                      className={`text-muted-foreground transition-transform duration-300 ${isClosedTradesOpen ? 'rotate-180' : ''}`}
+                    >
+                      <path d="m6 9 6 6 6-6"/>
+                    </svg>
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {isClosedTradesOpen && (
+                    <motion.div 
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden mt-3"
+                    >
+                      <div className="flex flex-col gap-1.5">
+                        {previousTrades.map((trade) => {
+                          const dateObj = trade.timestamp?.toDate ? trade.timestamp.toDate() : new Date();
+                          const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                          return (
+                            <div key={trade.id} className="px-4 py-3 rounded border border-border/50 bg-panel-2/30 flex items-center justify-between text-[11px] font-mono hover:bg-panel-2/80 transition-colors relative overflow-hidden">
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${trade.liveStatus === 'TP_HIT' ? 'bg-green-500/50' : 'bg-destructive/50'}`} />
+                              <div className="flex items-center gap-3 pl-2">
+                                <span className="font-display font-bold text-[13px] text-foreground w-12">{trade.asset}</span>
+                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold tracking-widest uppercase ${trade.direction === 'LONG' || trade.direction === 'BUY' ? 'text-primary' : 'text-destructive'}`}>
+                                  {trade.direction}
+                                </span>
+                              </div>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6">
+                                <span className={`font-bold sm:w-16 text-right text-xs ${trade.liveStatus === 'TP_HIT' ? 'text-green-500' : 'text-destructive'}`}>
+                                  {trade.expReturn}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground sm:w-24 text-right uppercase tracking-wider">{dateStr}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
                   )}
-                  <span className={`font-semibold ${trade.liveStatus === 'TP_HIT' ? 'text-green-500' : 'text-destructive'} w-16 text-right text-[11px] tracking-wide`}>
-                    {trade.expReturn}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+                </AnimatePresence>
+              </>
+            );
+          })()}
         </div>
       )}
 

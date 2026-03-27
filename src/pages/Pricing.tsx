@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const plans = [
   { name: "SIGNALS", price: "$17", period: "/mo", highlighted: false, features: ["5–10 weekly high-probability signals", "Market direction bias", "Risk level indicators", "Weekly market outlook"] },
   { name: "TRADER", price: "$29", period: "/mo", highlighted: true, supportingLine: "Structured daily execution plan — not just signals", features: ["Everything in Signals", "Daily trading plan (market bias, key levels, watchlist)", "Daily trade setups", "Entry & exit zones", "Volatility + liquidity analysis"] },
-  { name: "ELITE", price: "$199", period: "/mo", highlighted: false, isComingSoon: true, features: ["Everything in Trader", "Personalized portfolio plan", "Custom risk model", "Private insights dashboard"] },
+  { name: "ELITE", price: "$199", period: "/mo", highlighted: false, isComingSoon: true, features: ["Everything in Trader", "Personalized portfolio plan", "Custom risk model", "Private insights dashboard"], footerText: { title: "COMING SOON", desc: "Advanced execution models, private alpha streams, and institutional-grade portfolio intelligence." } },
 ];
 
 const Pricing = () => {
@@ -143,17 +143,31 @@ const Pricing = () => {
                   </li>
                 ))}
               </ul>
-              <button
-                disabled={processingState !== "idle"}
-                onClick={() => handleSubscribe(plan.name)}
-                className={`w-full py-3 font-mono text-xs tracking-[0.2em] rounded font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
-                  plan.highlighted
-                    ? "bg-primary text-primary-foreground hover:brightness-110"
-                    : "border border-border text-foreground hover:bg-panel-2"
-                }`}
-              >
-                {userProfile?.plan.toUpperCase() === plan.name ? "CURRENT PLAN" : "UNLOCK LIVE SIGNALS"}
-              </button>
+              {plan.name !== "ELITE" && (
+                <button
+                  disabled={processingState !== "idle"}
+                  onClick={() => handleSubscribe(plan.name)}
+                  className={`w-full py-3 font-mono text-xs tracking-[0.2em] rounded font-semibold transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                    plan.highlighted
+                      ? "bg-primary text-primary-foreground hover:brightness-110"
+                      : "border border-border text-foreground hover:bg-panel-2"
+                  }`}
+                >
+                  {userProfile?.plan.toUpperCase() === plan.name ? "CURRENT PLAN" : "UNLOCK LIVE SIGNALS"}
+                </button>
+              )}
+              {/* @ts-ignore */}
+              {plan.footerText && (
+                <div className="mt-5 pt-4 border-t border-border/30 text-center flex flex-col gap-2 relative">
+                  <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full opacity-50 pointer-events-none" />
+                  <span className="text-[10px] font-bold text-primary/80 tracking-[0.2em] uppercase relative drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                    {plan.footerText.title}
+                  </span>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground/60 font-mono relative">
+                    {plan.footerText.desc}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>
