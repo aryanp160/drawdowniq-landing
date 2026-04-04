@@ -11,10 +11,12 @@ export interface SignalCardProps {
   tp: number;
   sl: number;
   leverage?: number;
-  currentPrice?: number;
+  currentPrice?: number | null;  // live price (RUNNING only)
+  exitPrice?: number;     // locked exit price (closed trades)
+  finalReturn?: number;   // stored immutable return as a number
   status: 'RUNNING' | 'TP_HIT' | 'SL_HIT' | string;
   liveStatus?: string;
-  expReturn?: string;
+  expReturn?: string;     // formatted string from DashboardGrid
   timestamp?: any;
   validUntil?: any;
   isBlurred?: boolean;
@@ -29,7 +31,8 @@ const fmt = (val: number) => {
 
 const SignalCard = ({
   asset, direction, confidence, entryLow, entryHigh, tp, sl,
-  leverage = 1, currentPrice, status, liveStatus, expReturn, validUntil, isBlurred
+  leverage = 1, currentPrice, exitPrice, finalReturn: finalReturnNum,
+  status, liveStatus, expReturn, validUntil, isBlurred
 }: SignalCardProps) => {
 
   const isLong = direction === 'LONG' || direction === 'BUY';
@@ -59,28 +62,31 @@ const SignalCard = ({
     return () => clearInterval(id);
   }, [validUntil]);
 
-  // ── Slider: strictly SL → TP ─────────────────────────────────────────────
-  // For LONG:  left=SL, right=TP  |  For SHORT: left=TP, right=SL
-  // currentPrice pointer is always computed relative to actual SL→TP range.
-  const sliderLeft  = isLong ? sl : tp;
-  const sliderRight = isLong ? tp : sl;
-  const sliderRange = sliderRight - sliderLeft;
-
   const clamp = (v: number) => Math.max(0, Math.min(1, v));
 
   // Position of entry zone on the slider (as 0–100%)
-  const entryLowPos  = clamp((entryLow  - sliderLeft) / (sliderRange || 1)) * 100;
-  const entryHighPos = clamp((entryHigh - sliderLeft) / (sliderRange || 1)) * 100;
+  const entryLowPos  = clamp((entryLow  - sl) / (tp - sl || 1)) * 100;
+  const entryHighPos = clamp((entryHigh - sl) / (tp - sl || 1)) * 100;
 
-  // Current price pointer position
-  const priceLoaded = currentPrice != null && currentPrice > 0;
+  // ── Closed vs Live state ─────────────────────────────────────────────────
+  const isClosed = finalStatus === 'TP_HIT' || finalStatus === 'SL_HIT';
+
+  // For closed trades: show exit price on slider (locked, no pointer animation)
+  // For running trades: show live currentPrice pointer
+  const displayPrice = isClosed ? (exitPrice ?? null) : (currentPrice === null ? null : (currentPrice ?? null));
+  const priceLoaded  = displayPrice != null && displayPrice > 0;
+  const isUnavailable = !isClosed && currentPrice === null;
+  
   const rawPricePos = priceLoaded
-    ? clamp((currentPrice! - sliderLeft) / (sliderRange || 1))
+    ? Math.max(0, Math.min(1, (displayPrice! - sl) / (tp - sl)))
     : null;
   const pricePct = rawPricePos != null ? rawPricePos * 100 : null;
 
-  // ── Expected return (already computed by DashboardGrid, just display) ────
-  const finalReturn = expReturn || null;
+  // ── Return value ────────────────────────────────────────────────────────
+  // Prefer the pre-formatted string expReturn (passed by DashboardGrid).
+  // Fall back to formatting finalReturnNum directly.
+  const finalReturn = expReturn
+    ?? (finalReturnNum != null ? (finalReturnNum >= 0 ? `+${finalReturnNum.toFixed(1)}%` : `${finalReturnNum.toFixed(1)}%`) : null);
   const returnPositive = finalReturn ? !finalReturn.startsWith("-") : null;
 
   // ── Status helpers ───────────────────────────────────────────────────────
@@ -154,35 +160,50 @@ const SignalCard = ({
         </div>
       </div>
 
-      {/* ── CURRENT PRICE ── */}
+      {/* ── PRICE DISPLAY ── */}
       <div className="text-[10px] text-muted-foreground">
         {isBlurred ? (
-          <span>Current Price: —</span>
+          <span>Price: —</span>
+        ) : isClosed ? (
+          // Closed trade — show locked exit price
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted-foreground/60">Exit Price:</span>
+            {exitPrice != null ? (
+              <span className="text-foreground font-semibold">${fmt(exitPrice)}</span>
+            ) : (
+              <span className="opacity-40">—</span>
+            )}
+            <span className="ml-1 text-[7px] px-1 py-0.5 rounded border border-border/50 text-muted-foreground/50 uppercase tracking-widest font-bold">LOCKED</span>
+          </span>
+        ) : isUnavailable ? (
+          <span>
+            Current Price:{" "}
+            <span className="text-muted-foreground/60 font-medium">No market feed</span>
+          </span>
         ) : priceLoaded ? (
           <span>
             Current Price:{" "}
-            <span className="text-foreground font-semibold">${fmt(currentPrice!)}</span>
+            <span className="text-foreground font-semibold">${fmt(displayPrice!)}</span>
           </span>
         ) : (
-          <span className="opacity-50 animate-pulse">Loading price…</span>
+          <span className="opacity-50 animate-pulse">Fetching price...</span>
         )}
       </div>
 
-      {/* ── SLIDER: direction-aware SL ↔ TP ── */}
-      {/* For LONG:  left=SL(red) → entry(grey) → TP(green)=right  */}
-      {/* For SHORT: left=TP(green) → entry(grey) → SL(red)=right  */}
+      {/* ── SLIDER: strictly SL ↔ TP ── */}
+      {/* For all: left=SL(red) → entry(grey) → TP(green)=right */}
       <div className="flex flex-col gap-1.5">
         {/* Labels */}
         <div className="flex items-center justify-between text-[8px] text-muted-foreground uppercase leading-none">
-          <span className={isLong ? "text-destructive/70" : "text-primary/70"}>{isLong ? "SL" : "TP"}</span>
-          <span className={isLong ? "text-primary/70" : "text-destructive/70"}>{isLong ? "TP" : "SL"}</span>
+          <span className="text-destructive/70">SL</span>
+          <span className="text-primary/70">TP</span>
         </div>
 
         {/* Track */}
-        <div className="relative h-1.5 rounded-full overflow-visible flex items-center" style={{ background: "var(--panel-2, #1a1a2e)" }}>
-          {/* Left zone — SL side for LONG = red, TP side for SHORT = green */}
+        <div className={`relative h-1.5 rounded-full overflow-visible flex items-center transition-opacity ${isUnavailable ? "opacity-40" : "opacity-100"}`} style={{ background: "var(--panel-2, #1a1a2e)" }}>
+          {/* Left zone — SL side (red) */}
           <div
-            className={`absolute h-full rounded-l-full ${isLong ? "bg-destructive/50" : "bg-primary/50"}`}
+            className="absolute h-full rounded-l-full bg-destructive/50"
             style={{ left: 0, right: `${100 - Math.min(entryLowPos, entryHighPos)}%` }}
           />
           {/* Entry zone (neutral grey) */}
@@ -193,16 +214,16 @@ const SignalCard = ({
               right: `${100 - Math.max(entryLowPos, entryHighPos)}%`,
             }}
           />
-          {/* Right zone — TP side for LONG = green, SL side for SHORT = red */}
+          {/* Right zone — TP side (green) */}
           <div
-            className={`absolute h-full rounded-r-full ${isLong ? "bg-primary/50" : "bg-destructive/50"}`}
+            className="absolute h-full rounded-r-full bg-primary/50"
             style={{ left: `${Math.max(entryLowPos, entryHighPos)}%`, right: 0 }}
           />
 
-          {/* Current price pointer (white marker) */}
+          {/* Price pointer — animated for live, static (dimmed) for closed */}
           {!isBlurred && pricePct != null && (
             <div
-              className="absolute w-[3px] h-3 bg-foreground rounded shadow-sm shadow-black z-10 -translate-y-px transition-all duration-700"
+              className={`absolute w-[3px] h-3 rounded shadow-sm shadow-black z-10 -translate-y-px ${isClosed ? 'bg-muted-foreground/60' : 'bg-foreground transition-all duration-700'}`}
               style={{ left: `calc(${pricePct}% - 1.5px)` }}
             />
           )}
@@ -220,11 +241,20 @@ const SignalCard = ({
 
         {!isBlurred && finalReturn != null && (
           <div className="flex flex-col items-end gap-0.5">
-            <span className={`text-xs font-bold ${returnPositive ? 'text-green-500' : 'text-destructive'}`}>
-              {finalReturn}
-            </span>
+            <div className="flex items-center gap-1">
+              <span className={`text-xs font-bold ${finalReturn === "—" ? "text-muted-foreground/50" : (returnPositive ? "text-green-500" : "text-destructive")}`}>
+                {finalReturn}
+              </span>
+              {/* Lock icon signals immutability on closed trades */}
+              {isClosed && (
+                <svg className="w-2.5 h-2.5 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                </svg>
+              )}
+            </div>
             <span className="text-[8px] text-muted-foreground uppercase tracking-widest">
-              {finalStatus === 'RUNNING' ? 'Expected' : 'Finalised'}
+              {isClosed ? 'Finalised' : 'Expected'}
             </span>
           </div>
         )}
