@@ -241,11 +241,27 @@ const SignalCard = ({
 
         {!isBlurred && finalReturn != null && (
           <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1">
-              <span className={`text-xs font-bold ${finalReturn === "—" ? "text-muted-foreground/50" : (returnPositive ? "text-green-500" : "text-destructive")}`}>
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`text-[17px] font-semibold tabular-nums leading-none tracking-tight ${
+                  finalReturn === "—"
+                    ? "text-muted-foreground/40"
+                    : returnPositive
+                    ? "text-green-400"
+                    : "text-red-400"
+                }`}
+                style={{
+                  textShadow:
+                    finalReturn === "—"
+                      ? "none"
+                      : returnPositive
+                      ? "0 0 12px rgba(74,222,128,0.55)"
+                      : "0 0 12px rgba(248,113,113,0.55)",
+                }}
+              >
                 {finalReturn}
               </span>
-              {/* Lock icon signals immutability on closed trades */}
+              {/* Lock icon for closed trades */}
               {isClosed && (
                 <svg className="w-2.5 h-2.5 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
@@ -253,7 +269,7 @@ const SignalCard = ({
                 </svg>
               )}
             </div>
-            <span className="text-[8px] text-muted-foreground uppercase tracking-widest">
+            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">
               {isClosed ? 'Finalised' : 'Expected'}
             </span>
           </div>
