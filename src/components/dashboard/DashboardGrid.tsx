@@ -402,13 +402,12 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
       {!isLocked && previousTrades.length > 0 && (
         <div className="mt-8 border-t border-border/50 pt-6 reveal-up">
           {(() => {
-            const allCount = previousTrades.length; // for badge — includes EXPIRED
+            const allCount = previousTrades.length;
             const winningTrades = previousTrades.filter(t => t.liveStatus === "TP_HIT").length;
-            const losingTrades = previousTrades.filter(t => t.liveStatus === "SL_HIT").length;
-            const closedCount = winningTrades + losingTrades; // EXPIRED excluded from rate
-            const winRate = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
+            const losingTrades  = previousTrades.filter(t => t.liveStatus === "SL_HIT").length;
+            const closedCount   = winningTrades + losingTrades;
+            const winRate       = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
 
-            // Use stored finalReturn (TP_HIT only) for avg — never live calc
             const validReturns = previousTrades
               .filter(t => t.liveStatus === "TP_HIT")
               .map(t => t.finalReturn)
@@ -419,12 +418,11 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
             return (
               <>
-                {/* ── Collapsible header ── */}
+                {/* ── Header ── */}
                 <button
                   onClick={() => setIsClosedTradesOpen(!isClosedTradesOpen)}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-t border border-border bg-panel hover:bg-panel-2/60 transition-all group"
                 >
-                  {/* Left: title */}
                   <div className="flex items-center gap-3">
                     <span className="font-display font-bold text-sm text-foreground uppercase tracking-[0.18em] group-hover:text-primary transition-colors">
                       Execution Log
@@ -434,34 +432,31 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                     </span>
                   </div>
 
-                  {/* Right: stats pills + chevron */}
-                  <div className="flex items-center gap-5">
-                    <div className="hidden sm:flex items-center divide-x divide-border/50">
-                      <div className="flex flex-col items-center px-4 first:pl-0">
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-widest leading-none mb-1">Win Rate</span>
-                        <span className={`font-mono font-bold text-[11px] leading-none tabular-nums ${winRate >= 50 ? "text-green-500" : "text-destructive"}`}>
+                  <div className="flex items-center gap-3">
+                    <div className="hidden sm:flex items-center divide-x divide-border/40">
+                      <div className="flex flex-col items-center px-3">
+                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">Win Rate</span>
+                        <span className={`font-mono font-bold text-[10px] leading-none tabular-nums ${winRate >= 50 ? "text-green-400" : "text-red-400"}`}>
                           {winRate}%
                         </span>
                       </div>
-                      <div className="flex flex-col items-center px-4">
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-widest leading-none mb-1">Avg Return</span>
-                        <span className={`font-mono font-bold text-[11px] leading-none tabular-nums ${parseFloat(avgReturn) >= 0 ? "text-green-500" : "text-destructive"}`}>
+                      <div className="flex flex-col items-center px-3">
+                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">Avg Return</span>
+                        <span className={`font-mono font-bold text-[10px] leading-none tabular-nums ${parseFloat(avgReturn) >= 0 ? "text-green-400" : "text-red-400"}`}>
                           {parseFloat(avgReturn) > 0 ? "+" : ""}{avgReturn}%
                         </span>
                       </div>
-                      <div className="flex flex-col items-center px-4">
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-widest leading-none mb-1">TP / SL</span>
-                        <span className="font-mono font-bold text-[11px] leading-none tabular-nums text-foreground">
-                          <span className="text-green-500">{winningTrades}</span>
-                          <span className="text-muted-foreground/50 mx-0.5">/</span>
-                          <span className="text-destructive">{losingTrades}</span>
+                      <div className="flex flex-col items-center px-3">
+                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">TP / SL</span>
+                        <span className="font-mono font-bold text-[10px] leading-none tabular-nums">
+                          <span className="text-green-400">{winningTrades}</span>
+                          <span className="text-muted-foreground/40 mx-0.5">/</span>
+                          <span className="text-red-400">{losingTrades}</span>
                         </span>
                       </div>
                     </div>
-                    <svg
-                      width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                      className={`text-muted-foreground transition-transform duration-300 flex-shrink-0 ${isClosedTradesOpen ? "rotate-180" : ""}`}
-                    >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                      className={`text-muted-foreground/60 transition-transform duration-300 flex-shrink-0 ${isClosedTradesOpen ? "rotate-180" : ""}`}>
                       <path d="m6 9 6 6 6-6" />
                     </svg>
                   </div>
@@ -476,11 +471,11 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
-                      {/* Column header */}
-                      <div className="grid grid-cols-[1fr_auto_auto] gap-x-4 items-center px-4 py-1.5 border-x border-border bg-panel-2/20">
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-[0.15em] font-mono">Asset</span>
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-[0.15em] font-mono text-center w-20">Status</span>
-                        <span className="text-[8px] text-muted-foreground uppercase tracking-[0.15em] font-mono text-right w-32">Return · Time</span>
+                      {/* Column labels */}
+                      <div className="grid grid-cols-[1fr_120px_140px] items-center px-5 py-2 border-x border-border bg-panel-2/30">
+                        <span className="text-[7.5px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono">Asset</span>
+                        <span className="text-[7.5px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono text-center">Status</span>
+                        <span className="text-[7.5px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono text-right">Return · Time</span>
                       </div>
 
                       {/* Rows */}
@@ -490,102 +485,104 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                           const isLoss    = trade.liveStatus === "SL_HIT";
                           const isExpired = trade.liveStatus === "EXPIRED";
 
-                          // For expired trades prefer validUntil as the reference time
-                          const refTs = isExpired
-                            ? (trade.validUntil ?? trade.timestamp)
-                            : (trade.closedAt ?? trade.timestamp);
+                          const refTs   = isExpired ? (trade.validUntil ?? trade.timestamp) : (trade.closedAt ?? trade.timestamp);
                           const dateObj = refTs?.toDate ? refTs.toDate() : new Date();
                           const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                           const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
-                          // Only show a profit figure for TP_HIT
                           const returnNum = isWin && typeof trade.finalReturn === "number" ? trade.finalReturn : null;
-
-                          const barColor  = isWin ? "bg-green-500/70" : isLoss ? "bg-destructive/70" : "bg-border/50";
-                          const rowShadow = isWin
-                            ? "hover:shadow-[inset_0_0_20px_rgba(34,197,94,0.04)]"
+                          const barColor  = isWin ? "bg-green-500/80" : isLoss ? "bg-red-500/80" : "bg-border/40";
+                          const hoverBg   = isWin
+                            ? "hover:bg-green-500/[0.035] hover:shadow-[inset_0_0_24px_rgba(74,222,128,0.04)]"
                             : isLoss
-                            ? "hover:shadow-[inset_0_0_20px_rgba(239,68,68,0.04)]"
-                            : "";
+                            ? "hover:bg-red-500/[0.035] hover:shadow-[inset_0_0_24px_rgba(248,113,113,0.04)]"
+                            : "hover:bg-panel-2/40";
 
                           return (
                             <div
                               key={trade.id}
-                              className={`
-                                group relative grid grid-cols-[1fr_auto_auto] gap-x-4 items-center
-                                pl-0 pr-4 py-2
-                                border-t border-border/40 first:border-t-0
-                                bg-panel hover:bg-panel-2/50
-                                transition-all duration-150
-                                ${rowShadow}
-                              `}
+                              className={`group relative grid grid-cols-[1fr_120px_140px] items-center pl-0 pr-5 py-3.5 border-t border-border/25 first:border-t-0 bg-panel transition-all duration-150 ${hoverBg}`}
                               style={{ animationDelay: `${idx * 30}ms` }}
                             >
-                              {/* Left bar indicator */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor}`} />
+                              {/* Left accent bar */}
+                              <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${barColor} opacity-65 group-hover:opacity-100 transition-opacity duration-150`} />
 
-                              {/* COL 1: Asset + Direction */}
-                              <div className="flex items-center gap-2.5 pl-4 min-w-0">
-                                <span className="font-display font-bold text-[13px] text-foreground tracking-tight leading-none w-12 shrink-0">
+                              {/* COL 1 — Asset + Direction */}
+                              <div className="flex items-center gap-3 pl-5 min-w-0">
+                                <span className="font-display font-bold text-[14px] text-foreground tracking-tight leading-none w-14 shrink-0">
                                   {trade.asset}
                                 </span>
-                                <span className={`text-[8.5px] font-bold tracking-widest uppercase leading-none px-1 py-0.5 rounded-sm border ${
+                                <span className={`text-[8px] font-bold tracking-widest uppercase leading-none px-1.5 py-0.5 rounded border ${
                                   trade.direction === "LONG" || trade.direction === "BUY"
                                     ? "text-primary border-primary/30 bg-primary/5"
-                                    : "text-destructive border-destructive/30 bg-destructive/5"
+                                    : "text-red-400 border-red-400/30 bg-red-400/5"
                                 }`}>
                                   {trade.direction}
                                 </span>
                               </div>
 
-                              {/* COL 2: Status badge */}
-                              <div className="w-20 flex justify-center">
+                              {/* COL 2 — Status badge centred */}
+                              <div className="flex justify-center">
                                 {isWin ? (
-                                  <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm text-green-500 bg-green-500/10 border border-green-500/20">
-                                    <span className="w-1 h-1 rounded-full bg-green-500" />
+                                  <span
+                                    className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-green-400 bg-green-500/10 border border-green-500/20"
+                                    style={{ boxShadow: "0 0 8px rgba(74,222,128,0.14)" }}
+                                  >
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 6 3 3 5-5"/></svg>
                                     TP HIT
                                   </span>
                                 ) : isLoss ? (
-                                  <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm text-destructive bg-destructive/10 border border-destructive/20">
-                                    <span className="w-1 h-1 rounded-full bg-destructive" />
+                                  <span
+                                    className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-red-400 bg-red-500/10 border border-red-500/20"
+                                    style={{ boxShadow: "0 0 8px rgba(248,113,113,0.14)" }}
+                                  >
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 2 8 8M10 2 2 10"/></svg>
                                     SL HIT
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-sm text-muted-foreground bg-muted/10 border border-border/50">
-                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
+                                  <span className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-muted-foreground/40 bg-transparent border border-border/30">
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="6" cy="6" r="4.5"/><path d="M6 3.5V6l1.5 1.5"/></svg>
                                     EXPIRED
                                   </span>
                                 )}
                               </div>
 
-                              {/* COL 3: Return label + Timestamp */}
-                              <div className="w-32 flex flex-col items-end gap-0.5">
+                              {/* COL 3 — Return + label + timestamp right-aligned */}
+                              <div className="flex flex-col items-end gap-1">
                                 {isWin && returnNum != null ? (
                                   <>
-                                    <span className="font-mono font-bold text-[12px] tabular-nums leading-none text-green-500">
+                                    <span
+                                      className="font-mono font-bold text-[16px] tabular-nums leading-none text-green-400"
+                                      style={{ textShadow: "0 0 10px rgba(74,222,128,0.6)" }}
+                                    >
                                       +{returnNum.toFixed(1)}%
                                     </span>
-                                    <span className="text-[7.5px] text-green-500/70 uppercase tracking-widest leading-none font-mono">
-                                      Profit Booked
-                                    </span>
+                                    <span className="text-[7.5px] text-green-400/55 uppercase tracking-widest leading-none font-mono">Profit Booked</span>
                                   </>
                                 ) : isLoss ? (
                                   <>
-                                    <span className="font-mono text-[12px] text-muted-foreground/40 leading-none">—</span>
-                                    <span className="text-[7.5px] text-muted-foreground/50 uppercase tracking-widest leading-none font-mono">
-                                      Loss Exited
-                                    </span>
+                                    <span className="font-mono font-bold text-[16px] text-muted-foreground/25 leading-none tabular-nums">—</span>
+                                    <span className="text-[7.5px] text-muted-foreground/35 uppercase tracking-widest leading-none font-mono">Loss Exited</span>
                                   </>
                                 ) : (
-                                  <span className="font-mono text-[10px] text-muted-foreground/30 leading-none">—</span>
+                                  <span className="font-mono text-[14px] text-muted-foreground/20 leading-none">—</span>
                                 )}
-                                <span className="text-[8.5px] text-muted-foreground font-mono leading-none tabular-nums mt-0.5">
+                                <span className="text-[8px] text-muted-foreground/35 font-mono leading-none tabular-nums mt-0.5">
                                   {dateStr} · {timeStr}
                                 </span>
                               </div>
                             </div>
                           );
                         })}
+
+                        {/* Low-data hint */}
+                        {previousTrades.length < 3 && (
+                          <div className="px-5 py-3 border-t border-border/20 bg-panel-2/10">
+                            <p className="text-[9px] font-mono text-muted-foreground/28 uppercase tracking-widest text-center">
+                              More trades will appear as signals complete
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -595,6 +592,8 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
           })()}
         </div>
       )}
+
+
 
       {isLocked && (
         <div className="absolute bottom-0 left-0 right-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent z-10 flex flex-col items-center justify-end pb-12 pointer-events-auto">
