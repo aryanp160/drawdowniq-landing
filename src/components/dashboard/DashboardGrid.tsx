@@ -42,6 +42,8 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
   const [trades, setTrades] = useState<any[]>([]);
   const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [isClosedTradesOpen, setIsClosedTradesOpen] = useState(false);
+  // How many Execution Log rows to show — starts at 10, user can load more
+  const [visibleCount, setVisibleCount] = useState(10);
 
   // Search + filter state
   const [search, setSearch] = useState("");
@@ -76,7 +78,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
   // ── 1. Firestore snapshot ────────────────────────────────────────────────
   useEffect(() => {
-    const q = query(collection(db, "signals"), orderBy("timestamp", "desc"), limit(10));
+    const q = query(collection(db, "signals"), orderBy("timestamp", "desc"), limit(60));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetched = snapshot.docs.map(docSnap => {
         const d = docSnap.data();
@@ -402,12 +404,13 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
       {!isLocked && previousTrades.length > 0 && (
         <div className="mt-8 border-t border-border/50 pt-6 reveal-up">
           {(() => {
-            const allCount = previousTrades.length;
+            const allCount      = previousTrades.length;
             const winningTrades = previousTrades.filter(t => t.liveStatus === "TP_HIT").length;
             const losingTrades  = previousTrades.filter(t => t.liveStatus === "SL_HIT").length;
             const closedCount   = winningTrades + losingTrades;
             const winRate       = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
 
+            // All-time avg return — every TP_HIT ever fetched
             const validReturns = previousTrades
               .filter(t => t.liveStatus === "TP_HIT")
               .map(t => t.finalReturn)
@@ -415,6 +418,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
             const avgReturn = validReturns.length > 0
               ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length).toFixed(1)
               : "0.0";
+
+            // Only render the first `visibleCount` rows
+            const visibleTrades = previousTrades.slice(0, visibleCount);
+            const hasMore       = previousTrades.length > visibleCount;
 
             return (
               <>
@@ -480,7 +487,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
                       {/* Rows */}
                       <div className="flex flex-col border-x border-b border-border rounded-b overflow-hidden">
-                        {previousTrades.map((trade, idx) => {
+                        {visibleTrades.map((trade, idx) => {
                           const isWin     = trade.liveStatus === "TP_HIT";
                           const isLoss    = trade.liveStatus === "SL_HIT";
                           const isExpired = trade.liveStatus === "EXPIRED";
@@ -581,6 +588,20 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                             <p className="text-[9px] font-mono text-muted-foreground/28 uppercase tracking-widest text-center">
                               More trades will appear as signals complete
                             </p>
+                          </div>
+                        )}
+
+                        {/* Load More */}
+                        {hasMore && (
+                          <div className="border-t border-border/25 bg-panel-2/10">
+                            <button
+                              onClick={() => setVisibleCount(c => c + 10)}
+                              className="w-full py-2.5 text-[9px] font-mono font-bold uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                              Load {Math.min(10, previousTrades.length - visibleCount)} more
+                              <span className="text-muted-foreground/30">({previousTrades.length - visibleCount} remaining)</span>
+                            </button>
                           </div>
                         )}
                       </div>

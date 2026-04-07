@@ -112,23 +112,23 @@ const Pricing = () => {
                   Most Popular
                 </div>
               )}
-              <div className="mb-6">
-                <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                  {plan.name}
-                </span>
-                <div className="mt-2 flex items-baseline gap-2 relative">
-                  <div className="flex items-baseline gap-1">
-                    <span className="font-display text-4xl font-bold">{plan.price}</span>
+                <div className="mb-6">
+                  <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+                    {plan.name}
+                  </span>
+                  <div className="mt-2 flex items-baseline gap-2">
+                    <span className={`font-display text-4xl font-bold ${plan.isComingSoon ? 'text-muted-foreground/50' : ''}`}>
+                      {plan.price}
+                    </span>
                     <span className="font-mono text-xs text-muted-foreground">{plan.period}</span>
                   </div>
                   {/* @ts-ignore */}
                   {plan.isComingSoon && (
-                    <span className="text-[9px] text-muted-foreground/70 uppercase tracking-widest border border-border/30 bg-panel px-1.5 py-0.5 rounded leading-none opacity-80">
+                    <span className="mt-2 inline-block text-[9px] text-muted-foreground/50 uppercase tracking-widest border border-border/30 bg-panel px-2 py-0.5 rounded leading-none">
                       Coming Soon
                     </span>
                   )}
                 </div>
-              </div>
               {/* @ts-ignore */}
               {plan.supportingLine && (
                 <div className="mb-4 pb-4 border-b border-border/50 text-center">
@@ -138,8 +138,8 @@ const Pricing = () => {
               <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground font-mono">
-                    <span className="text-primary mt-0.5">›</span>
-                    {f}
+                    <span className={`mt-0.5 ${plan.isComingSoon ? 'text-muted-foreground/30' : 'text-primary'}`}>›</span>
+                    <span className={plan.isComingSoon ? 'opacity-50' : ''}>{f}</span>
                   </li>
                 ))}
               </ul>
@@ -157,17 +157,21 @@ const Pricing = () => {
                 </button>
               )}
               {/* @ts-ignore */}
-              {plan.footerText && (
-                <div className="mt-5 pt-4 border-t border-border/30 text-center flex flex-col gap-2 relative">
-                  <div className="absolute inset-0 bg-primary/5 blur-xl rounded-full opacity-50 pointer-events-none" />
-                  <span className="text-[10px] font-bold text-primary/80 tracking-[0.2em] uppercase relative drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
-                    {plan.footerText.title}
-                  </span>
-                  <p className="text-[10px] leading-relaxed text-muted-foreground/60 font-mono relative">
-                    {plan.footerText.desc}
-                  </p>
+              {plan.isComingSoon ? (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-full py-2 rounded border border-border/40 bg-panel text-center">
+                    <span className="font-mono text-[10px] text-muted-foreground/45 uppercase tracking-[0.2em]">
+                      Coming Soon
+                    </span>
+                  </div>
+                  {/* @ts-ignore */}
+                  {plan.footerText && (
+                    <p className="text-[9px] font-mono text-muted-foreground/35 uppercase tracking-widest text-center leading-relaxed">
+                      {plan.footerText.desc}
+                    </p>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           ))}
         </div>

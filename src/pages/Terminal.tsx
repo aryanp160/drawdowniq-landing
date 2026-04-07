@@ -1,154 +1,215 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import DailyTradingPlan from "@/components/dashboard/DailyTradingPlan";
 
-const SYSTEM_FEEDBACK_LINES = [
-  "Scanning liquidity clusters...",
-  "Monitoring volatility regimes...",
-  "Recalibrating risk models...",
-  "Analyzing order book depth..."
-];
+// ── helpers ────────────────────────────────────────────────────────────────
+
+function isTradeExpired(validUntil: any): boolean {
+  if (!validUntil) return false;
+  const t = validUntil?.toDate ? validUntil.toDate().getTime() : new Date(validUntil).getTime();
+  return Date.now() > t;
+}
+
+/** Neutral when neither direction exceeds 60 % of running signals. */
+function deriveBias(signals: any[]): "Bullish" | "Bearish" | "Neutral" {
+  const running = signals.filter(s => s.status === "RUNNING" && !isTradeExpired(s.validUntil));
+  if (running.length === 0) return "Neutral";
+  const longs  = running.filter(s => s.direction === "LONG"  || s.direction === "BUY").length;
+  const shorts = running.filter(s => s.direction === "SHORT" || s.direction === "SELL").length;
+  const total  = longs + shorts;
+  const longPct = total > 0 ? longs / total : 0.5;
+  if (longPct > 0.60) return "Bullish";
+  if (longPct < 0.40) return "Bearish";
+  return "Neutral";
+}
+
+/** Avg leverage of running signals → volatility tier. */
+function deriveVolatility(signals: any[]): "Low Volatility" | "Moderate Volatility" | "High Volatility" {
+  const running = signals.filter(s => s.status === "RUNNING" && !isTradeExpired(s.validUntil));
+  if (running.length === 0) return "Moderate Volatility";
+  const avgLev = running.reduce((sum, s) => sum + (Number(s.leverage) || 1), 0) / running.length;
+  if (avgLev < 5)  return "Low Volatility";
+  if (avgLev < 12) return "Moderate Volatility";
+  return "High Volatility";
+}
+
+function suggestedAction(bias: "Bullish" | "Bearish" | "Neutral"): string {
+  if (bias === "Bullish") return "Market bias: Bullish — favour long setups in high-confidence entry zones";
+  if (bias === "Bearish") return "Market bias: Bearish — prioritise short opportunities; manage position size";
+  return "Market range-bound — remain selective; wait for high-confidence setups";
+}
+
+function contextLine(bias: "Bullish" | "Bearish" | "Neutral", vol: string, count: number): string {
+  if (count === 0) return "No active signals at this time. New setups will appear when conditions align.";
+  const dir  = bias === "Bullish" ? "bullish" : bias === "Bearish" ? "bearish" : "mixed";
+  return `${count} active signal${count !== 1 ? "s" : ""} currently aligned with ${dir} momentum and ${vol.toLowerCase()}.`;
+}
+
+// ── component ──────────────────────────────────────────────────────────────
 
 const Terminal = () => {
   const { currentUser, userProfile, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !currentUser) {
-      navigate('/login');
-    }
+    if (!loading && !currentUser) navigate("/login");
   }, [currentUser, loading, navigate]);
 
   if (loading || !currentUser) return null;
-  const isActive = userProfile?.subscriptionStatus === 'active';
+
+  const isActive        = userProfile?.subscriptionStatus === "active";
   const isTraderOrElite = isActive && (userProfile?.plan === "trader" || userProfile?.plan === "elite");
 
-  // Session Timer Logic 
-  const [minutesToUpdate, setMinutesToUpdate] = useState(14);
-  const [secondsToUpdate, setSecondsToUpdate] = useState(59);
-  const [feedbackIndex, setFeedbackIndex] = useState(0);
-
+  // Live signals for Command Center stats
+  const [signals, setSignals] = useState<any[]>([]);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setSecondsToUpdate(prev => {
-        if (prev === 0) {
-          setMinutesToUpdate(m => (m === 0 ? 14 : m - 1));
-          return 59;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+    const q = query(collection(db, "signals"), orderBy("timestamp", "desc"), limit(60));
+    return onSnapshot(q, snap => setSignals(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, []);
 
+  const bias        = deriveBias(signals);
+  const activeCount = signals.filter(s => s.status === "RUNNING" && !isTradeExpired(s.validUntil)).length;
+  const volatility  = deriveVolatility(signals);
+  const longCount   = signals.filter(s => s.status === "RUNNING" && !isTradeExpired(s.validUntil) && (s.direction === "LONG"  || s.direction === "BUY")).length;
+  const shortCount  = signals.filter(s => s.status === "RUNNING" && !isTradeExpired(s.validUntil) && (s.direction === "SHORT" || s.direction === "SELL")).length;
+
+  const biasText  = bias === "Bullish" ? "text-green-400"  : bias === "Bearish" ? "text-red-400"  : "text-warning";
+  const biasDot   = bias === "Bullish" ? "bg-green-400"    : bias === "Bearish" ? "bg-red-400"    : "bg-warning";
+  const biasRing  = bias === "Bullish" ? "border-green-500/15 bg-green-500/5" : bias === "Bearish" ? "border-red-500/15 bg-red-500/5" : "border-warning/15 bg-warning/5";
+  const volText   = volatility === "Low Volatility" ? "text-green-400" : volatility === "High Volatility" ? "text-red-400" : "text-warning";
+
+  // Model-refresh countdown to next 00:00 UTC
+  const [mins, setMins] = useState(0);
+  const [secs, setSecs] = useState(0);
   useEffect(() => {
-    const feedbackTimer = setInterval(() => {
-      setFeedbackIndex(prev => (prev + 1) % SYSTEM_FEEDBACK_LINES.length);
-    }, 5000); // Rotate every 5 seconds
-    return () => clearInterval(feedbackTimer);
+    const tick = () => {
+      const now  = new Date();
+      const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+      const diff = Math.max(0, next.getTime() - Date.now());
+      setMins(Math.floor(diff / 60_000) % 60);
+      setSecs(Math.floor((diff % 60_000) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
   }, []);
 
   return (
     <div className="min-h-screen bg-background noise-overlay">
       <Navbar />
-      <div className="pt-24 px-6 max-w-[1280px] mx-auto pb-12">
-        
+      {/* Grid canvas — same as landing page */}
+      <div className="grid-bg">
+        <div className="pt-24 px-6 max-w-[1280px] mx-auto pb-12">
+
+        {/* Page title */}
         <div className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
           <h1 className="font-display text-2xl font-bold uppercase tracking-widest text-foreground">
             LIVE TERMINAL
           </h1>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-muted-foreground uppercase bg-panel border border-border px-2 py-1 rounded">
-              Plan: {userProfile?.plan || 'Free'}
+              Plan: {userProfile?.plan || "Free"}
             </span>
-            <span className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${isActive ? 'bg-green-500/10 border-green-500/30 text-green-500' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
-              Status: {isActive ? 'ACTIVE' : 'INACTIVE'}
+            <span className={`font-mono text-[10px] uppercase tracking-widest px-2 py-1 rounded border ${isActive ? "bg-green-500/10 border-green-500/30 text-green-500" : "bg-destructive/10 border-destructive/30 text-destructive"}`}>
+              Status: {isActive ? "ACTIVE" : "INACTIVE"}
             </span>
           </div>
         </div>
 
-        {/* Premium Command Center */}
+        {/* ── Command Center ── */}
         {isActive && (
-          <div className="mb-6 rounded border border-primary/20 bg-panel-2/30 flex flex-col overflow-hidden reveal-up">
-            <div className="flex flex-col md:flex-row md:items-center justify-between p-3 border-b border-border/50 bg-primary/5 gap-3">
-              <div className="flex items-center gap-2">
-                <motion.span 
-                  className="w-2 h-2 rounded-full bg-primary shrink-0" 
-                  animate={{ opacity: [0.3, 1, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                />
-                <span className="font-mono text-xs font-semibold text-primary uppercase tracking-widest">
-                  Suggested Action: Focus on long setups based on current model
+          <div className="mb-6 rounded border border-border/35 bg-panel overflow-hidden reveal-up">
+
+            {/* Suggested action bar */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between px-4 py-2.5 border-b border-border/25 bg-panel-2/15 gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${biasDot}`} />
+                <span className="font-mono text-[11px] text-muted-foreground/75 tracking-wide truncate">
+                  {suggestedAction(bias)}
                 </span>
               </div>
-              
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-panel border border-border/50 overflow-hidden w-[220px]">
-                  <motion.span 
-                    key={feedbackIndex}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    className="font-mono text-[9px] text-muted-foreground uppercase tracking-widest whitespace-nowrap"
-                  >
-                    {SYSTEM_FEEDBACK_LINES[feedbackIndex]}
-                  </motion.span>
-                </div>
-                
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-warning/10 border border-warning/20">
-                  <span className="font-mono text-[9px] text-warning uppercase font-bold tracking-widest">
-                    Next update in: {String(minutesToUpdate).padStart(2, '0')}:{String(secondsToUpdate).padStart(2, '0')}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest hidden sm:inline">
+                  Data synced with latest signals
+                </span>
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded border border-border/30 bg-panel">
+                  <svg className="w-2.5 h-2.5 text-muted-foreground/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+                  </svg>
+                  <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-widest">
+                    Model refresh in: {String(mins).padStart(2, "0")}:{String(secs).padStart(2, "0")}
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Rebuilt Market Overview Row via inline rendering to ensure cohesive border grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/50">
-              <div className="p-3.5 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Market Status</span>
-                  <span className="font-display font-bold text-[15px] text-foreground uppercase tracking-widest">Bullish</span>
+            {/* Three stat panels */}
+            <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-border/25">
+
+              {/* Market Bias */}
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[8px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono">Market Bias</span>
+                  <span className={`font-display font-bold text-[15px] uppercase tracking-widest ${biasText}`}>
+                    {bias}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground/30 font-mono">
+                    {longCount}L · {shortCount}S
+                  </span>
                 </div>
-                <div className="w-8 h-8 rounded-full border border-green-500/20 flex items-center justify-center bg-green-500/5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center ${biasRing}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${biasDot}`} />
                 </div>
               </div>
 
-              <div className="p-3.5 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Active Signals</span>
-                  <span className="font-display font-bold text-[15px] text-foreground tracking-widest">14 Nodes</span>
+              {/* Active Signals */}
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[8px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono">Active Signals</span>
+                  <span className="font-display font-bold text-[15px] text-foreground tracking-widest">
+                    {activeCount}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground/30 font-mono">currently running</span>
                 </div>
-                <div className="text-[10px] font-mono text-primary font-bold bg-primary/10 border border-primary/20 px-2 py-0.5 rounded uppercase tracking-widest">
-                  Tracking
-                </div>
+                <span className={`text-[9px] font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${activeCount > 0 ? "text-primary/70 border-primary/15 bg-primary/5" : "text-muted-foreground/25 border-border/25"}`}>
+                  {activeCount > 0 ? "Live" : "Idle"}
+                </span>
               </div>
 
-              <div className="p-3.5 flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-muted-foreground uppercase tracking-widest mb-1">Global Risk Mode</span>
-                  <span className="font-display font-bold text-[15px] text-warning tracking-widest uppercase">Elevated</span>
+              {/* Volatility */}
+              <div className="p-4 flex items-center justify-between">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[8px] text-muted-foreground/45 uppercase tracking-[0.18em] font-mono">Volatility Profile</span>
+                  <span className={`font-display font-bold text-[15px] uppercase tracking-widest ${volText}`}>
+                    {volatility}
+                  </span>
+                  <span className="text-[8px] text-muted-foreground/30 font-mono">derived from active leverage</span>
                 </div>
-                <div className="w-8 h-8 rounded-full border border-warning/20 flex items-center justify-center bg-warning/5 text-warning">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                  </svg>
-                </div>
+                <svg className={`w-4 h-4 ${volText} opacity-40`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                </svg>
               </div>
+            </div>
+
+            {/* Context summary */}
+            <div className="px-4 py-2 border-t border-border/20 bg-panel-2/10">
+              <p className="text-[9px] font-mono text-muted-foreground/30 uppercase tracking-widest">
+                {contextLine(bias, volatility, activeCount)}
+              </p>
             </div>
           </div>
         )}
 
         <DailyTradingPlan isLocked={!isTraderOrElite} />
-
         <DashboardGrid variant="real" isLocked={!isActive} />
 
+        </div>
       </div>
       <Footer />
     </div>
