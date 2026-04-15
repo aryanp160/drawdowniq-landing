@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
-import DailyTradingPlan from "@/components/dashboard/DailyTradingPlan";
+import LiveSessionBar from "@/components/dashboard/LiveSessionBar";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -65,6 +65,9 @@ const Terminal = () => {
 
   const isActive        = userProfile?.subscriptionStatus === "active";
   const isTraderOrElite = isActive && (userProfile?.plan === "trader" || userProfile?.plan === "elite");
+
+  // Live session bias — set by LiveSessionBar via onBiasChange
+  const [sessionBias, setSessionBias] = useState<"LONG" | "SHORT" | "NEUTRAL" | null>(null);
 
   // Live signals for Command Center stats
   const [signals, setSignals] = useState<any[]>([]);
@@ -206,8 +209,8 @@ const Terminal = () => {
           </div>
         )}
 
-        <DailyTradingPlan isLocked={!isTraderOrElite} />
-        <DashboardGrid variant="real" isLocked={!isActive} />
+        <LiveSessionBar onBiasChange={setSessionBias} />
+        <DashboardGrid variant="real" isLocked={!isActive} sessionBias={sessionBias} />
 
         </div>
       </div>

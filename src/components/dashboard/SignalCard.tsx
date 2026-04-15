@@ -20,6 +20,8 @@ export interface SignalCardProps {
   timestamp?: any;
   validUntil?: any;
   isBlurred?: boolean;
+  /** When a live session is active, signals opposing this bias are dimmed. */
+  sessionBias?: "LONG" | "SHORT" | "NEUTRAL" | null;
 }
 
 const fmt = (val: number) => {
@@ -32,7 +34,7 @@ const fmt = (val: number) => {
 const SignalCard = ({
   asset, direction, confidence, entryLow, entryHigh, tp, sl,
   leverage = 1, currentPrice, exitPrice, finalReturn: finalReturnNum,
-  status, liveStatus, expReturn, validUntil, isBlurred
+  status, liveStatus, expReturn, validUntil, isBlurred, sessionBias
 }: SignalCardProps) => {
 
   const isLong = direction === 'LONG' || direction === 'BUY';
@@ -98,10 +100,25 @@ const SignalCard = ({
   const statusKey = finalStatus as keyof typeof statusConfig;
   const sc = statusConfig[statusKey] ?? statusConfig.RUNNING;
 
+  // ── Session bias dim ─────────────────────────────────────────────────────
+  // Dim cards that go AGAINST the live session bias (NEUTRAL = no dimming)
+  const isLongDir  = direction === "LONG"  || direction === "BUY";
+  const isShortDir = direction === "SHORT" || direction === "SELL";
+  const isDimmed =
+    !isBlurred &&
+    sessionBias != null &&
+    sessionBias !== "NEUTRAL" &&
+    ((sessionBias === "LONG" && isShortDir) ||
+     (sessionBias === "SHORT" && isLongDir));
+
   return (
     <motion.div
-      className={`panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all ${isBlurred ? "blur-[5px] opacity-40 select-none pointer-events-none" : "hover:bg-panel-2/30"}`}
-      whileHover={{ y: isBlurred ? 0 : -2 }}
+      className={`panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all ${
+        isBlurred ? "blur-[5px] opacity-40 select-none pointer-events-none" :
+        isDimmed  ? "opacity-35 hover:opacity-60"  :
+        "hover:bg-panel-2/30"
+      }`}
+      whileHover={{ y: isBlurred || isDimmed ? 0 : -2 }}
     >
       {/* ── TOP ROW: Asset | Direction | Confidence | Leverage | Timer ── */}
       <div className="flex items-start justify-between border-b border-border/50 pb-2.5">
