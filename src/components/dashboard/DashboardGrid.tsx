@@ -9,8 +9,6 @@ interface DashboardGridProps {
   variant?: "preview" | "real";
   className?: string;
   isLocked?: boolean;
-  /** Live session bias — dims signals that go against it */
-  sessionBias?: "LONG" | "SHORT" | "NEUTRAL" | null;
 }
 
 
@@ -40,7 +38,7 @@ function isTradeExpired(validUntil: any): boolean {
   return Date.now() > t;
 }
 
-const DashboardGrid = ({ variant = "preview", className = "", isLocked = false, sessionBias = null }: DashboardGridProps) => {
+const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }: DashboardGridProps) => {
   const [trades, setTrades] = useState<any[]>([]);
   const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [isClosedTradesOpen, setIsClosedTradesOpen] = useState(false);
@@ -388,7 +386,6 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false, 
               {...trade}
               currentPrice={prices[trade.asset]}
               isBlurred={blurred}
-              sessionBias={sessionBias}
             />
           );
         })}

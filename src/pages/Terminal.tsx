@@ -66,8 +66,7 @@ const Terminal = () => {
   const isActive        = userProfile?.subscriptionStatus === "active";
   const isTraderOrElite = isActive && (userProfile?.plan === "trader" || userProfile?.plan === "elite");
 
-  // Live session bias — set by LiveSessionBar via onBiasChange
-  const [sessionBias, setSessionBias] = useState<"LONG" | "SHORT" | "NEUTRAL" | null>(null);
+
 
   // Live signals for Command Center stats
   const [signals, setSignals] = useState<any[]>([]);
@@ -209,8 +208,8 @@ const Terminal = () => {
           </div>
         )}
 
-        <LiveSessionBar onBiasChange={setSessionBias} />
-        <DashboardGrid variant="real" isLocked={!isActive} sessionBias={sessionBias} />
+        <LiveSessionBar />
+        <DashboardGrid variant="real" isLocked={!isActive} />
 
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { collection, query, limit, onSnapshot, orderBy } from "firebase/firestore";
+import { doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -8,23 +8,29 @@ import { motion, AnimatePresence } from "framer-motion";
 export interface LiveSession {
   isActive: boolean;
   startTime?: any;
-  endTime?: any;
-  asset?: string;
-  direction?: "LONG" | "SHORT";
-  entryPrice?: number;
-  finalReturn?: number;
-  sessionNote?: string;
-  currentBias: "LONG" | "SHORT" | "NEUTRAL";
+  note?: string;         
+  sessionNote?: string; 
   updatedAt?: any;
 }
 
-interface LiveSessionBarProps {
-  onBiasChange?: (bias: "LONG" | "SHORT" | "NEUTRAL" | null) => void;
+export interface LiveCall {
+  asset: string;
+  direction: "LONG" | "SHORT";
+  entryPrice: number;
+  entryLocked?: boolean; 
+  sl?: number;
+  tp?: number;
+  leverage?: number;
+  status: "ACTIVE" | "CLOSED";
+  finalReturn?: number;
+  exitPrice?: number;
+  startTime?: any;
+  closedAt?: any;
+  updatedAt?: any;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/** Binance spot price fetch — same pattern as DashboardGrid. */
 async function fetchPrice(symbol: string): Promise<number | null> {
   try {
     const res = await fetch(
@@ -39,13 +45,18 @@ async function fetchPrice(symbol: string): Promise<number | null> {
   }
 }
 
-/** Calculate live return % (no leverage assumed unless added). */
-function calcReturn(direction: "LONG" | "SHORT", entry: number, current: number): number {
-  if (direction === "LONG")  return ((current - entry) / entry) * 100;
-  return ((entry - current) / entry) * 100;
+function calcReturn(direction: string, entry: number, current: number, leverage: number = 1): number {
+  const isLong = direction === "LONG" || direction === "BUY";
+  if (isLong) return ((current - entry) / entry) * 100 * leverage;
+  return ((entry - current) / entry) * 100 * leverage;
 }
 
-/** Format elapsed time from a Firestore Timestamp to "1h 42m" or "23m". */
+function fmtPrice(n: number): string {
+  if (n >= 10_000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+  if (n >= 100)    return n.toFixed(2);
+  return n.toFixed(4);
+}
+
 function fmtDuration(startTs: any, endTs?: any): string {
   const start = startTs?.toDate ? startTs.toDate().getTime() : null;
   if (!start) return "—";
@@ -58,72 +69,69 @@ function fmtDuration(startTs: any, endTs?: any): string {
   return `${m}m`;
 }
 
-/** Format a price number cleanly. */
-function fmtPrice(n: number): string {
-  if (n >= 10_000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (n >= 100)    return n.toFixed(2);
-  return n.toFixed(4);
-}
-
 // ── Component ──────────────────────────────────────────────────────────────
 
-const LiveSessionBar = ({ onBiasChange }: LiveSessionBarProps) => {
+const LiveSessionBar = () => {
   const [session, setSession]     = useState<LiveSession | null>(null);
+  const [liveCall, setLiveCall]   = useState<LiveCall | null>(null);
   const [loading, setLoading]     = useState(true);
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [elapsed, setElapsed]     = useState("—");
+  
   const priceIntervalRef          = useRef<ReturnType<typeof setInterval> | null>(null);
   const elapsedIntervalRef        = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── 1. Firestore snapshot ───────────────────────────────────────────────
+  // 1. Listen to Live Session
   useEffect(() => {
-    const q = query(
-      collection(db, "liveSession"),
-      orderBy("updatedAt", "desc"),
-      limit(1)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      if (snap.empty) {
+    const unsub = onSnapshot(doc(db, "liveSession", "current"), (docSnap) => {
+      if (!docSnap.exists()) {
         setSession(null);
-        onBiasChange?.(null);
       } else {
-        const data = snap.docs[0].data() as LiveSession;
-        setSession(data);
-        onBiasChange?.(data.isActive ? data.currentBias : null);
+        setSession(docSnap.data() as LiveSession);
       }
       setLoading(false);
     });
     return () => unsub();
   }, []);
 
-  // ── 2. Live price polling (only when session is active + has asset) ─────
+  // 2. Listen to Live Call
   useEffect(() => {
-    // Clear any existing interval first
+    const unsub = onSnapshot(doc(db, "liveCall", "current"), (docSnap) => {
+      if (!docSnap.exists()) {
+        setLiveCall(null);
+      } else {
+        setLiveCall(docSnap.data() as LiveCall);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  // 3. Live Price Polling (3-5s interval)
+  useEffect(() => {
     if (priceIntervalRef.current) {
       clearInterval(priceIntervalRef.current);
       priceIntervalRef.current = null;
     }
 
-    const asset = session?.asset;
-    if (!session?.isActive || !asset || !session?.entryPrice) {
+    if (liveCall?.status !== "ACTIVE" || !liveCall?.asset || !liveCall?.entryPrice) {
       setLivePrice(null);
       return;
     }
 
     const poll = async () => {
-      const p = await fetchPrice(asset);
+      const p = await fetchPrice(liveCall.asset);
       if (p != null) setLivePrice(p);
     };
 
-    poll(); // immediate first fetch
-    priceIntervalRef.current = setInterval(poll, 8_000); // then every 8s
+    poll(); // immediate
+    priceIntervalRef.current = setInterval(poll, 4_000); // every 4 seconds
 
     return () => {
       if (priceIntervalRef.current) clearInterval(priceIntervalRef.current);
     };
-  }, [session?.isActive, session?.asset, session?.entryPrice]);
+  }, [liveCall?.status, liveCall?.asset, liveCall?.entryPrice]);
 
-  // ── 3. Elapsed timer (tick every 30s) ─────────────────────────────────
+  // 4. Session Elapsed Time
   useEffect(() => {
     if (elapsedIntervalRef.current) clearInterval(elapsedIntervalRef.current);
 
@@ -141,253 +149,224 @@ const LiveSessionBar = ({ onBiasChange }: LiveSessionBarProps) => {
     };
   }, [session?.isActive, session?.startTime]);
 
-  // ── Derived values ─────────────────────────────────────────────────────
   if (loading) return null;
 
-  const isActive    = session?.isActive === true;
-  const bias        = session?.currentBias ?? "NEUTRAL";
-  const hasTradeData = !!(session?.asset && session?.entryPrice && session?.direction);
+  const isActiveSession = session?.isActive === true;
+  const note = session?.note || session?.sessionNote;
 
-  // Live return — only meaningful when we have a price
-  const liveReturn =
-    hasTradeData && livePrice && session?.entryPrice && session?.direction
-      ? calcReturn(session.direction, session.entryPrice, livePrice)
-      : null;
+  const hasActiveCall = liveCall?.status === "ACTIVE";
+  const hasClosedCall = liveCall?.status === "CLOSED" && liveCall?.finalReturn != null;
 
+  const isLong = liveCall?.direction === "LONG" || liveCall?.direction === "BUY";
+  const displayDirection = liveCall?.direction || "LONG";
+  const leverageVal = liveCall?.leverage || 1;
+
+  // Live P&L Calculation
+  let liveReturn: number | null = null;
+  // Calculate return only if entry is locked
+  if (hasActiveCall && livePrice && liveCall.entryPrice && liveCall.entryLocked === true) {
+    liveReturn = calcReturn(liveCall.direction, liveCall.entryPrice, livePrice, leverageVal);
+  }
+  
   const liveReturnPositive = liveReturn != null && liveReturn >= 0;
+  const closedReturnPositive = liveCall?.finalReturn != null && liveCall.finalReturn >= 0;
 
-  // Last session result (inactive, but has finalReturn stored)
-  const hasLastResult =
-    !isActive &&
-    session != null &&
-    session.finalReturn != null &&
-    session.asset &&
-    session.direction;
-
-  const finalReturnPositive = !!(session?.finalReturn && session.finalReturn >= 0);
-
-  // Colour configs
-  const biasConfig = {
-    LONG:    { label: "LONG MODE",  dot: "bg-green-400", text: "text-green-400", ring: "border-green-500/20 bg-green-500/5" },
-    SHORT:   { label: "SHORT MODE", dot: "bg-red-400",   text: "text-red-400",   ring: "border-red-500/20   bg-red-500/5"   },
-    NEUTRAL: { label: "NEUTRAL",    dot: "bg-amber-400", text: "text-amber-400", ring: "border-amber-500/20 bg-amber-500/5" },
-  }[bias] ?? { label: "NEUTRAL", dot: "bg-amber-400", text: "text-amber-400", ring: "border-amber-500/20 bg-amber-500/5" };
+  // Progress Bar calculation
+  let progressPos = 0;
+  if (hasActiveCall && liveCall!.sl && liveCall!.tp && livePrice) {
+    progressPos = Math.max(0, Math.min(100, ((livePrice - liveCall!.sl) / (liveCall!.tp - liveCall!.sl)) * 100));
+  }
 
   const startStr = session?.startTime?.toDate
     ? session.startTime.toDate().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })
     : null;
 
-  // Duration for last session
-  const lastDuration = hasLastResult
-    ? fmtDuration(session!.startTime, session!.endTime)
-    : null;
-
   return (
     <AnimatePresence mode="wait">
       <motion.div
-        key={isActive ? "active" : "inactive"}
+        key={isActiveSession ? "active" : "inactive"}
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -6 }}
         transition={{ duration: 0.2 }}
-        className="mb-4 flex flex-col gap-2"
+        className="mb-8 flex flex-col gap-4"
       >
         {/* ─── ACTIVE SESSION ──────────────────────────────────────────────── */}
-        {isActive ? (
-          <div className="rounded border border-border/40 bg-panel overflow-hidden">
-
-            {/* Header strip */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/25 bg-red-500/[0.04]">
-              <div className="flex items-center gap-2.5">
+        {isActiveSession ? (
+          <div className="rounded border border-border/40 bg-panel shadow-2xl overflow-hidden flex flex-col">
+            
+            {/* Session Header Strip */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border/25 bg-red-500/[0.04]">
+              <div className="flex items-center gap-3">
                 <span className="relative flex h-2 w-2 shrink-0">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-60" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
                 </span>
-                <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-red-400">
-                  Live Session Active
+                <span className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-red-500">
+                  LIVE SESSION ACTIVE
                 </span>
                 {startStr && (
-                  <span className="font-mono text-[9px] text-muted-foreground/35 uppercase tracking-widest hidden sm:inline">
-                    since {startStr} · {elapsed}
+                  <span className="font-mono text-[10px] text-muted-foreground/50 uppercase tracking-widest hidden sm:inline ml-2">
+                    Since: {startStr} <span className="opacity-40 px-1">|</span> Duration: {elapsed}
                   </span>
                 )}
               </div>
-              <span className="font-mono text-[9px] text-muted-foreground/35 uppercase tracking-widest hidden sm:inline">
-                Monitoring market — follow real-time guidance
-              </span>
             </div>
 
-            {/* Content row: bias + trade data + note */}
-            <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-3 px-4 py-3 items-start">
+            {/* Trade Data Area */}
+            <div className="p-5 sm:p-6 flex flex-col gap-5">
+              {hasActiveCall ? (
+                <>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
+                    {/* Left: Trade Specs (Asset, Dir, Entry, Current) */}
+                    <div className="flex flex-col gap-4">
+                      {/* BIG: Asset | Direction | Leverage */}
+                      <div className="flex items-center gap-3">
+                        <span className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-foreground leading-none">
+                          {liveCall.asset}
+                        </span>
+                        <div className="flex flex-col gap-1.5 items-start mt-1">
+                          <span className={`px-2 py-0.5 rounded text-[11px] font-bold leading-none uppercase ${isLong ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {displayDirection}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold leading-none text-muted-foreground bg-panel-2 border border-border/50">
+                            {leverageVal}x
+                          </span>
+                        </div>
+                      </div>
 
-              {/* Left: Bias pill */}
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] text-muted-foreground/40 uppercase tracking-[0.18em] font-mono shrink-0">Bias</span>
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded border font-mono text-[10px] font-bold uppercase tracking-widest ${biasConfig.ring} ${biasConfig.text}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${biasConfig.dot}`} />
-                  {biasConfig.label}
+                      {/* MID: Data row */}
+                      <div className="flex flex-wrap items-center gap-8 font-mono text-[13px]">
+                        <div className="flex items-center gap-2">
+                          <span className="uppercase text-muted-foreground/50 tracking-widest text-[9px]">Entry</span>
+                          <span className="text-foreground tracking-tight font-semibold">{fmtPrice(liveCall.entryPrice)}</span>
+                        </div>
+                        {livePrice && (
+                          <div className="flex items-center gap-2">
+                            <span className="uppercase text-muted-foreground/50 tracking-widest text-[9px]">Now</span>
+                            <span className="text-foreground tracking-tight font-semibold">{fmtPrice(livePrice)}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* RIGHT SIDE (HERO): Live PnL */}
+                    {liveReturn != null && (
+                      <div className="flex flex-col items-start sm:items-end gap-1 shrink-0">
+                        <span className={`font-mono font-bold text-5xl sm:text-6xl tabular-nums leading-[0.8] tracking-tighter ${liveReturnPositive ? "text-green-400" : "text-red-400"}`}
+                          style={{ textShadow: liveReturnPositive ? "0 0 32px rgba(74,222,128,0.3)" : "0 0 32px rgba(248,113,113,0.3)" }}>
+                          {liveReturnPositive ? "+" : ""}{liveReturn.toFixed(2)}%
+                        </span>
+                        <span className="font-mono text-[10px] text-muted-foreground/40 uppercase tracking-[0.2em] mt-2 font-bold">
+                          Live PnL
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PROGRESS BAR (REAL) */}
+                  {liveCall!.sl && liveCall!.tp && livePrice && (
+                    <div className="flex flex-col gap-1.5 pt-2">
+                      <div className="flex justify-between font-mono text-[9px] text-muted-foreground/60 uppercase tracking-[0.2em]">
+                        <span>SL {fmtPrice(liveCall!.sl)}</span>
+                        <span>TP {fmtPrice(liveCall!.tp)}</span>
+                      </div>
+                      <div className="h-1.5 bg-panel-2 rounded-full w-full relative overflow-hidden border border-border/25">
+                         <div 
+                           className={`absolute top-0 bottom-0 left-0 ${liveReturnPositive ? 'bg-green-500/20' : 'bg-red-500/20'} transition-all duration-700 ease-out`}
+                           style={{ width: `${progressPos}%` }}
+                         />
+                         <div 
+                           className={`absolute top-0 bottom-0 w-1 rounded-full ${liveReturnPositive ? 'bg-green-400' : 'bg-red-400'} transition-all duration-700 ease-out`}
+                           style={{ left: `${progressPos}%`, transform: 'translateX(-50%)', boxShadow: liveReturnPositive ? "0 0 6px rgba(74,222,128,0.8)" : "0 0 6px rgba(248,113,113,0.8)" }}
+                         />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CONTEXT LINE */}
+                  {note && (
+                    <div className="pt-4 border-t border-border/20 text-[11px] font-mono text-muted-foreground/80 italic mt-1">
+                      {note}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="py-8 flex justify-center items-center">
+                  <span className="font-mono text-xs text-muted-foreground/50 uppercase tracking-[0.2em] animate-pulse">
+                    Waiting for trade setup...
+                  </span>
                 </div>
-              </div>
-
-              {/* Right: Trade stats + note */}
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:border-l sm:border-border/20 sm:pl-4">
-
-                {/* Asset + direction */}
-                {hasTradeData && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Trade</span>
-                    <span className="font-mono text-[11px] font-semibold text-foreground">{session!.asset}</span>
-                    <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
-                      session!.direction === "LONG"
-                        ? "text-green-400 border-green-500/20 bg-green-500/5"
-                        : "text-red-400 border-red-500/20 bg-red-500/5"
-                    }`}>
-                      {session!.direction}
-                    </span>
-                  </div>
-                )}
-
-                {/* Entry price */}
-                {session?.entryPrice && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Entry</span>
-                    <span className="font-mono text-[11px] text-foreground">{fmtPrice(session.entryPrice)}</span>
-                  </div>
-                )}
-
-                {/* Live price */}
-                {livePrice && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Now</span>
-                    <span className="font-mono text-[11px] text-foreground tabular-nums">{fmtPrice(livePrice)}</span>
-                  </div>
-                )}
-
-                {/* Live return — the star of the show */}
-                {liveReturn != null && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Live P&L</span>
-                    <span
-                      className={`font-mono font-bold text-[14px] tabular-nums leading-none ${
-                        liveReturnPositive ? "text-green-400" : "text-red-400"
-                      }`}
-                      style={{
-                        textShadow: liveReturnPositive
-                          ? "0 0 10px rgba(74,222,128,0.5)"
-                          : "0 0 10px rgba(248,113,113,0.5)",
-                      }}
-                    >
-                      {liveReturnPositive ? "+" : ""}{liveReturn.toFixed(2)}%
-                    </span>
-                    <span className="text-[8px] text-muted-foreground/30 uppercase tracking-widest font-mono">LIVE</span>
-                  </div>
-                )}
-
-                {/* Note */}
-                {session?.sessionNote && (
-                  <div className="flex items-center gap-1.5 w-full sm:w-auto">
-                    <svg className="w-3 h-3 text-muted-foreground/25 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path d="M15 17H9m6-4H9m10-4H5a2 2 0 00-2 2v10a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2z"/>
-                    </svg>
-                    <span className="font-mono text-[10px] text-muted-foreground/45 italic">{session.sessionNote}</span>
-                  </div>
-                )}
-              </div>
+              )}
             </div>
           </div>
-
         ) : (
           /* ─── NO ACTIVE SESSION ─────────────────────────────────────────── */
-          <div className="rounded border border-border/25 bg-panel/60 overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2 h-2 rounded-full bg-muted-foreground/20 shrink-0" />
-                <span className="font-mono text-[11px] text-muted-foreground/45 uppercase tracking-[0.18em]">
-                  No Active Session
-                </span>
-              </div>
-              <span className="font-mono text-[9px] text-muted-foreground/25 uppercase tracking-widest hidden sm:inline">
-                Next live session will begin soon
-              </span>
-            </div>
+          <div className="flex flex-col px-4 py-3 opacity-60 gap-1 mt-2">
+             <div className="flex items-center gap-3">
+               <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+               <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em] font-semibold">
+                 NO ACTIVE SESSION
+               </span>
+             </div>
+             <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest pl-4">
+               Next session will begin soon
+             </span>
           </div>
         )}
 
-        {/* ─── LAST SESSION RESULT (always show when available) ────────────── */}
-        {hasLastResult && (
+        {/* ─── RESULT CARD (Closed call) ─────────────────────────────────── */}
+        {hasClosedCall && (!isActiveSession || !hasActiveCall) && (
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: 0.1 }}
-            className="rounded border border-border/25 bg-panel overflow-hidden"
+            className={`rounded bg-panel shadow-sm p-5 border border-border/30 border-l-4 ${closedReturnPositive ? 'border-l-green-500/70' : 'border-l-red-500/70'}`}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-border/20 bg-panel-2/20">
-              <span className="font-mono text-[8px] text-muted-foreground/40 uppercase tracking-[0.18em]">
-                Last Session Result
+            <div className="flex flex-col gap-4">
+              <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-[0.2em] font-bold">
+                LAST TRADE RESULT
               </span>
-              {lastDuration && (
-                <span className="font-mono text-[8px] text-muted-foreground/25 uppercase tracking-widest">
-                  Duration: {lastDuration}
-                </span>
-              )}
-            </div>
-
-            {/* Result row */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3">
-
-              {/* Asset + direction */}
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-[13px] text-foreground">{session!.asset}</span>
-                <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
-                  session!.direction === "LONG"
-                    ? "text-green-400 border-green-500/20 bg-green-500/5"
-                    : "text-red-400 border-red-500/20 bg-red-500/5"
-                }`}>
-                  {session!.direction}
-                </span>
-              </div>
-
-              {/* Divider */}
-              <span className="text-border/40 hidden sm:inline">·</span>
-
-              {/* Final return */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Result</span>
-                <span
-                  className={`font-mono font-bold text-[15px] tabular-nums leading-none ${
-                    finalReturnPositive ? "text-green-400" : "text-red-400"
-                  }`}
-                  style={{
-                    textShadow: finalReturnPositive
-                      ? "0 0 8px rgba(74,222,128,0.45)"
-                      : "0 0 8px rgba(248,113,113,0.45)",
-                  }}
-                >
-                  {finalReturnPositive ? "+" : ""}{session!.finalReturn!.toFixed(2)}%
-                </span>
-              </div>
-
-              {/* Entry price if stored */}
-              {session?.entryPrice && (
-                <>
-                  <span className="text-border/40 hidden sm:inline">·</span>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[8px] text-muted-foreground/35 uppercase tracking-widest font-mono">Entry</span>
-                    <span className="font-mono text-[11px] text-muted-foreground/50">{fmtPrice(session.entryPrice)}</span>
+              
+              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-bold text-2xl tracking-tight text-foreground">{liveCall.asset}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded leading-none ${closedReturnPositive ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                      {displayDirection}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-bold bg-panel-2 border border-border/50 px-2 py-0.5 rounded leading-none">
+                      {leverageVal}x
+                    </span>
                   </div>
-                </>
-              )}
-
-              {/* Session end time */}
-              {session?.endTime?.toDate && (
-                <>
-                  <span className="text-border/40 hidden sm:inline">·</span>
-                  <span className="font-mono text-[9px] text-muted-foreground/30 uppercase tracking-widest">
-                    Closed {session.endTime.toDate().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false })}
+                  
+                  <div className="font-mono text-[11px] text-muted-foreground mt-1 flex items-center gap-4 uppercase tracking-widest opacity-80">
+                    {liveCall.entryPrice && liveCall.exitPrice ? (
+                      <span>{fmtPrice(liveCall.entryPrice)} → {fmtPrice(liveCall.exitPrice)}</span>
+                    ) : liveCall.entryPrice ? (
+                      <span>Entry: {fmtPrice(liveCall.entryPrice)}</span>
+                    ) : null}
+                    
+                    {liveCall.startTime && liveCall.closedAt && (
+                      <>
+                        <span className="text-border">|</span>
+                        <span>Duration: {fmtDuration(liveCall.startTime, liveCall.closedAt)}</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex flex-col items-end shrink-0 gap-1">
+                  <span
+                    className={`font-mono font-bold text-4xl sm:text-5xl tabular-nums tracking-tighter leading-[0.85] ${closedReturnPositive ? "text-green-400" : "text-red-400"}`}
+                    style={{ textShadow: closedReturnPositive ? "0 0 24px rgba(74,222,128,0.35)" : "0 0 24px rgba(248,113,113,0.35)" }}
+                  >
+                    {closedReturnPositive ? "+" : ""}{liveCall.finalReturn!.toFixed(2)}%
                   </span>
-                </>
-              )}
+                  <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-[0.2em] font-bold">
+                    Result
+                  </span>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
