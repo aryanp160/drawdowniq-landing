@@ -153,7 +153,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 7_000);
+    const interval = setInterval(fetchPrices, 3_000);
     return () => clearInterval(interval);
   }, [trades]);
 

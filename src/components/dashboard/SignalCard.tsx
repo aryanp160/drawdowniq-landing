@@ -117,11 +117,11 @@ const SignalCard = ({
           }
         `}
       </style>
-      {/* ── TOP ROW: Asset | Direction | Confidence | Leverage | Timer ── */}
-      <div className="flex items-start justify-between border-b border-border/50 pb-2.5">
-        <div className="flex flex-col gap-2">
+      {/* ── TOP LAYER: Asset/Direction/Leverage & Expected Return ── */}
+      <div className="flex items-start justify-between border-b border-border/50 pb-3">
+        <div className="flex flex-col gap-2 relative">
           {/* Asset + Direction */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 h-7 mt-0.5">
             <span className="font-display font-bold text-[22px] text-foreground leading-none tracking-tight">
               {isBlurred ? "***" : asset}
             </span>
@@ -142,128 +142,12 @@ const SignalCard = ({
           </div>
         </div>
 
-        {/* Valid timer */}
-        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold tracking-widest uppercase ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning/10 border border-warning/20 text-warning' : 'bg-panel-2 border border-border/50 text-muted-foreground opacity-60'}`}>
-          <span className={`w-1.5 h-1.5 rounded-full ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning animate-pulse' : 'bg-muted-foreground'}`} />
-          {isBlurred ? "--h --m" : timeLeft}
-        </div>
-      </div>
-
-      {/* ── MIDDLE: Entry Zone | TP | SL ── */}
-      <div className="grid grid-cols-3 gap-3 py-0.5">
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Entry Zone</span>
-          <span className="text-xs text-foreground font-semibold leading-none">
-            {isBlurred ? "-.--" : `$${fmt(entryLow)}`}
-          </span>
-          <span className="text-[10px] text-muted-foreground leading-none">
-            {isBlurred ? "-.--" : `$${fmt(entryHigh)}`}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Take Profit</span>
-          <span className="text-xs text-green-500 font-semibold leading-none">
-            {isBlurred ? "-.--" : `$${fmt(tp)}`}
-          </span>
-        </div>
-        <div className="flex flex-col gap-1">
-          <span className="text-[9px] text-muted-foreground uppercase leading-none mb-0.5">Stop Loss</span>
-          <span className="text-xs text-destructive font-semibold leading-none">
-            {isBlurred ? "-.--" : `$${fmt(sl)}`}
-          </span>
-        </div>
-      </div>
-
-      {/* ── PRICE DISPLAY ── */}
-      <div className="text-[10px] text-muted-foreground">
-        {isBlurred ? (
-          <span>Price: —</span>
-        ) : isClosed ? (
-          // Closed trade — show locked exit price
-          <span className="flex items-center gap-1.5">
-            <span className="text-muted-foreground/60">Exit Price:</span>
-            {exitPrice != null ? (
-              <span className="text-foreground font-semibold">${fmt(exitPrice)}</span>
-            ) : (
-              <span className="opacity-40">—</span>
-            )}
-            <span className="ml-1 text-[7px] px-1 py-0.5 rounded border border-border/50 text-muted-foreground/50 uppercase tracking-widest font-bold">LOCKED</span>
-          </span>
-        ) : isUnavailable ? (
-          <span>
-            Current Price:{" "}
-            <span className="text-muted-foreground/60 font-medium">No market feed</span>
-          </span>
-        ) : priceLoaded ? (
-          <span>
-            Current Price:{" "}
-            <span className="text-foreground font-semibold">${fmt(displayPrice!)}</span>
-          </span>
-        ) : (
-          <span className="opacity-50 animate-pulse">Fetching price...</span>
-        )}
-      </div>
-
-      {/* ── SLIDER: strictly SL ↔ TP ── */}
-      {/* For all: left=SL(red) → entry(grey) → TP(green)=right */}
-      <div className="flex flex-col gap-1.5">
-        {/* Labels */}
-        <div className="flex items-center justify-between text-[8px] text-muted-foreground uppercase leading-none">
-          <span className="text-destructive/70">SL</span>
-          <span className="text-primary/70">TP</span>
-        </div>
-
-        {/* Track */}
-        <div className={`relative h-1.5 rounded-full overflow-hidden flex items-center transition-opacity ${isUnavailable ? "opacity-40" : "opacity-100"}`} style={{ background: "var(--panel-2, #1a1a2e)" }}>
-          
-          {/* Animated Glow on Hover */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-0">
-             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-full h-full animate-slide-shimmer" />
-          </div>
-
-          {/* Left zone — SL side (red) */}
-          <div
-            className="absolute h-full rounded-l-full bg-destructive/50"
-            style={{ left: 0, right: `${100 - Math.min(entryLowPos, entryHighPos)}%` }}
-          />
-          {/* Entry zone (neutral grey) */}
-          <div
-            className="absolute h-full bg-muted-foreground/50"
-            style={{
-              left: `${Math.min(entryLowPos, entryHighPos)}%`,
-              right: `${100 - Math.max(entryLowPos, entryHighPos)}%`,
-            }}
-          />
-          {/* Right zone — TP side (green) */}
-          <div
-            className="absolute h-full rounded-r-full bg-primary/50"
-            style={{ left: `${Math.max(entryLowPos, entryHighPos)}%`, right: 0 }}
-          />
-
-          {/* Price pointer — animated for live, static (dimmed) for closed */}
-          {!isBlurred && pricePct != null && (
-            <div
-              className={`absolute w-[3px] h-3 rounded shadow-sm shadow-black z-10 -translate-y-px ${isClosed ? 'bg-muted-foreground/60' : 'bg-foreground transition-all duration-700'}`}
-              style={{ left: `calc(${pricePct}% - 1.5px)` }}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* ── FOOTER: Status | Expected Return ── */}
-      <div className="flex items-center justify-between pt-2.5 mt-0.5 border-t border-border/50">
-        <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
-          <span className={`text-[10px] uppercase tracking-widest font-bold ${sc.color}`}>
-            {isBlurred ? "UNKNOWN" : sc.label.replace(/^[^\s]+ /, "")}
-          </span>
-        </div>
-
+        {/* Expected/Final Return (Top Right) */}
         {!isBlurred && finalReturn != null && (
-          <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right">
+          <div className="flex flex-col items-end gap-0">
+            <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right h-7 mt-0.5">
               <span
-                className={`text-[17px] font-semibold tabular-nums leading-none tracking-tight ${
+                className={`text-[21px] font-bold tabular-nums leading-none tracking-[0.02em] ${
                   finalReturn === "—"
                     ? "text-muted-foreground/40"
                     : returnPositive
@@ -283,17 +167,105 @@ const SignalCard = ({
               </span>
               {/* Lock icon for closed trades */}
               {isClosed && (
-                <svg className="w-2.5 h-2.5 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <svg className="w-3 h-3 text-muted-foreground/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
               )}
             </div>
-            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">
-              {isClosed ? 'Finalised' : 'Expected'}
+            <span className="text-[9px] text-muted-foreground/70 uppercase tracking-widest font-bold">
+              {isClosed ? 'Finalised' : 'Expected Profit'}
             </span>
           </div>
         )}
+      </div>
+
+      {/* ── MIDDLE: 3-COLUMN METRICS (SL | Entry | TP) ── */}
+      <div className="flex items-end justify-center gap-5 py-3 mt-1">
+        {/* Stop Loss (Left) */}
+        <div className="flex flex-col gap-1.5 items-center">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Stop Loss</span>
+          <span className="text-[15px] text-red-500 font-bold leading-none tracking-tight">
+            {isBlurred ? "-.--" : `$${fmt(sl)}`}
+          </span>
+        </div>
+
+        {/* Subtle Divider */}
+        <div className="h-6 w-px bg-border/40 mb-0.5" />
+
+        {/* Entry Zone (Center) */}
+        <div className="flex flex-col gap-1.5 items-center">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Entry</span>
+          <span className="text-[14px] text-white font-bold leading-none tracking-tight">
+            {isBlurred ? "-.--" : entryLow === entryHigh ? `$${fmt(entryLow)}` : `$${fmt(entryLow)} — $${fmt(entryHigh)}`}
+          </span>
+        </div>
+
+        {/* Subtle Divider */}
+        <div className="h-6 w-px bg-border/40 mb-0.5" />
+
+        {/* Take Profit (Right) */}
+        <div className="flex flex-col gap-1.5 items-center">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Take Profit</span>
+          <span className="text-[15px] text-green-500 font-bold leading-none tracking-tight">
+            {isBlurred ? "-.--" : `$${fmt(tp)}`}
+          </span>
+        </div>
+      </div>
+
+      {/* ── SLIDER ── */}
+      <div className="flex flex-col gap-1.5 mt-2 px-1">
+        <div className={`relative h-1 rounded-full overflow-hidden flex items-center transition-opacity ${isUnavailable ? "opacity-40" : "opacity-100"}`} style={{ background: "var(--panel-2, #1a1a2e)" }}>
+          {/* Left zone (SL text mapping) */}
+          <div className="absolute h-full rounded-l-full bg-red-500/70" style={{ left: 0, right: `${100 - Math.min(entryLowPos, entryHighPos)}%` }} />
+          
+          {/* Entry zone */}
+          <div className="absolute h-full bg-muted-foreground/40" style={{ left: `${Math.min(entryLowPos, entryHighPos)}%`, right: `${100 - Math.max(entryLowPos, entryHighPos)}%` }} />
+          
+          {/* Right zone (TP text mapping) */}
+          <div className="absolute h-full rounded-r-full bg-green-500/70" style={{ left: `${Math.max(entryLowPos, entryHighPos)}%`, right: 0 }} />
+
+          {/* Price tracker */}
+          {!isBlurred && pricePct != null && (
+            <div className={`absolute w-[2px] h-2 rounded bg-white transition-all duration-700 ${isClosed ? 'opacity-50' : 'opacity-100'}`} style={{ left: `calc(${pricePct}% - 1px)` }} />
+          )}
+        </div>
+      </div>
+
+      {/* ── CURRENT PRICE ── */}
+      <div className="text-[10px] text-muted-foreground mt-0.5 px-0.5">
+        {isBlurred ? (
+          <span>Price: —</span>
+        ) : isClosed ? (
+          <span className="flex items-center gap-1.5">
+            <span className="text-muted-foreground/60">Exit Price:</span>
+            {exitPrice != null ? (
+              <span className="text-foreground font-semibold">${fmt(exitPrice)}</span>
+            ) : <span className="opacity-40">—</span>}
+            <span className="ml-1 text-[7px] px-1 py-0.5 rounded border border-border/50 text-muted-foreground/50 uppercase tracking-widest font-bold">LOCKED</span>
+          </span>
+        ) : isUnavailable ? (
+          <span>Current Price: <span className="text-muted-foreground/60 font-medium">No market feed</span></span>
+        ) : priceLoaded ? (
+          <span>Current Price: <span className="text-foreground font-semibold">${fmt(displayPrice!)}</span></span>
+        ) : (
+          <span className="opacity-50 animate-pulse">Fetching price...</span>
+        )}
+      </div>
+
+      {/* ── FOOTER: Status | Valid Timer ── */}
+      <div className="flex items-center justify-between pt-3 mt-1 border-t border-border/50">
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
+          <span className={`text-[10px] uppercase tracking-widest font-bold ${sc.color}`}>
+            {isBlurred ? "UNKNOWN" : sc.label.replace(/^[^\s]+ /, "")}
+          </span>
+        </div>
+
+        <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold tracking-widest uppercase ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning/10 border border-warning/20 text-warning' : 'bg-panel-2 border border-border/50 text-muted-foreground opacity-60'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning animate-pulse' : 'bg-muted-foreground'}`} />
+          {isBlurred ? "--h --m" : timeLeft}
+        </div>
       </div>
     </motion.div>
   );
