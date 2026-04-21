@@ -23,10 +23,11 @@ export interface SignalCardProps {
 }
 
 const fmt = (val: number) => {
-  if (val >= 10000) return val.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (val >= 1000)  return val.toLocaleString("en-US", { maximumFractionDigits: 1 });
-  if (val >= 100)   return val.toFixed(2);
-  return val.toFixed(4);
+  if (val >= 1) {
+    const rounded = parseFloat(val.toFixed(2));
+    return rounded.toLocaleString("en-US", { maximumFractionDigits: 2 });
+  }
+  return parseFloat(val.toFixed(6)).toString();
 };
 
 const SignalCard = ({
@@ -119,33 +120,33 @@ const SignalCard = ({
       </style>
       {/* ── TOP LAYER: Asset/Direction/Leverage & Expected Return ── */}
       <div className="flex items-start justify-between border-b border-border/50 pb-3">
-        <div className="flex flex-col gap-2 relative">
+        <div className="flex flex-col gap-1.5">
           {/* Asset + Direction */}
-          <div className="flex items-center gap-2 h-7 mt-0.5">
+          <div className="flex items-center gap-2">
             <span className="font-display font-bold text-[22px] text-foreground leading-none tracking-tight">
               {isBlurred ? "***" : asset}
             </span>
-            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isLong ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
+            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${isLong ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
               {isBlurred ? "---" : direction}
             </span>
           </div>
           {/* Confidence | R:R | Leverage */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">Conf</span>
-            <span className="text-sm font-semibold text-foreground">{isBlurred ? "--" : confidence}</span>
-            <span className="text-muted-foreground/40">|</span>
-            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">R:R</span>
-            <span className="text-sm font-semibold text-foreground">{isBlurred ? "-.-" : `1:${riskReward}`}</span>
-            <span className="text-muted-foreground/40">|</span>
-            <span className="text-[9px] text-muted-foreground uppercase tracking-widest">Lev</span>
-            <span className="text-sm font-semibold text-foreground">{leverage}x</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">Conf</span>
+            <span className="text-sm font-semibold text-foreground leading-none">{isBlurred ? "--" : confidence}</span>
+            <span className="text-muted-foreground/40 leading-none">|</span>
+            <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">R:R</span>
+            <span className="text-sm font-semibold text-foreground leading-none">{isBlurred ? "-.-" : `1:${riskReward}`}</span>
+            <span className="text-muted-foreground/40 leading-none">|</span>
+            <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">Lev</span>
+            <span className="text-sm font-semibold text-foreground leading-none">{leverage}x</span>
           </div>
         </div>
 
         {/* Expected/Final Return (Top Right) */}
         {!isBlurred && finalReturn != null && (
-          <div className="flex flex-col items-end gap-0">
-            <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right h-7 mt-0.5">
+          <div className="flex flex-col items-end gap-1.5">
+            <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right">
               <span
                 className={`text-[21px] font-bold tabular-nums leading-none tracking-[0.02em] ${
                   finalReturn === "—"
@@ -173,7 +174,7 @@ const SignalCard = ({
                 </svg>
               )}
             </div>
-            <span className="text-[9px] text-muted-foreground/70 uppercase tracking-widest font-bold">
+            <span className="text-[9px] text-muted-foreground/70 uppercase tracking-widest font-bold leading-none">
               {isClosed ? 'Finalised' : 'Expected Profit'}
             </span>
           </div>
@@ -233,21 +234,24 @@ const SignalCard = ({
       </div>
 
       {/* ── CURRENT PRICE ── */}
-      <div className="text-[10px] text-muted-foreground mt-0.5 px-0.5">
+      <div className="text-[10px] text-muted-foreground mt-0.5 px-0.5 flex items-center">
         {isBlurred ? (
           <span>Price: —</span>
         ) : isClosed ? (
           <span className="flex items-center gap-1.5">
             <span className="text-muted-foreground/60">Exit Price:</span>
             {exitPrice != null ? (
-              <span className="text-foreground font-semibold">${fmt(exitPrice)}</span>
+              <span className="text-[13px] text-foreground font-bold tracking-tight">${fmt(exitPrice)}</span>
             ) : <span className="opacity-40">—</span>}
             <span className="ml-1 text-[7px] px-1 py-0.5 rounded border border-border/50 text-muted-foreground/50 uppercase tracking-widest font-bold">LOCKED</span>
           </span>
         ) : isUnavailable ? (
-          <span>Current Price: <span className="text-muted-foreground/60 font-medium">No market feed</span></span>
+          <span className="flex items-center gap-1.5">Current Price: <span className="text-muted-foreground/60 font-medium">No market feed</span></span>
         ) : priceLoaded ? (
-          <span>Current Price: <span className="text-foreground font-semibold">${fmt(displayPrice!)}</span></span>
+          <span className="flex items-center gap-1.5">
+            <span>Current Price:</span> 
+            <span className="text-[14px] text-foreground font-bold tabular-nums tracking-tight">${fmt(displayPrice!)}</span>
+          </span>
         ) : (
           <span className="opacity-50 animate-pulse">Fetching price...</span>
         )}
