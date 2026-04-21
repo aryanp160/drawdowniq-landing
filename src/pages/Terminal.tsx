@@ -7,6 +7,7 @@ import Navbar from "@/components/landing/Navbar";
 import Footer from "@/components/landing/Footer";
 import DashboardGrid from "@/components/dashboard/DashboardGrid";
 import LiveSessionBar from "@/components/dashboard/LiveSessionBar";
+import Snow from "@/components/dashboard/Snow";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -103,10 +104,11 @@ const Terminal = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background noise-overlay">
+    <div className="min-h-screen bg-background noise-overlay relative z-0">
+      <Snow />
       <Navbar />
       {/* Grid canvas — same as landing page */}
-      <div className="grid-bg">
+      <div className="grid-bg relative z-10">
         <div className="pt-24 px-6 max-w-[1280px] mx-auto pb-12">
 
         {/* Page title */}

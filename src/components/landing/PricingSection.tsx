@@ -3,16 +3,20 @@ import { useNavigate } from "react-router-dom";
 const plans = [
   {
     name: "SIGNALS",
-    price: "$17",
+    price: "$19",
     period: "/mo",
     highlighted: false,
     planKey: "signals",
-    ctaLabel: "Get Started",
+    modeLabel: "PASSIVE",
+    supportingLine: "Setups you follow",
+    ctaLabel: "Unlock Signals",
+    differentiator: "Built for consistency — not signal spam.",
     features: [
-      "5–10 weekly high-probability signals",
-      "Market direction bias",
-      "Risk level indicators",
-      "Weekly market outlook",
+      "Up to 20 high-quality trade setups weekly",
+      "Clear LONG / SHORT direction",
+      "Defined entry, TP & SL levels",
+      "Market bias + context",
+      "Weekly outlook"
     ],
   },
   {
@@ -21,14 +25,16 @@ const plans = [
     period: "/mo",
     highlighted: true,
     planKey: "trader",
-    ctaLabel: "Get Started",
-    supportingLine: "Structured daily execution plan — not just signals",
+    modeLabel: "ACTIVE",
+    supportingLine: "We trade together live",
+    ctaLabel: "Access Trading System",
+    differentiator: "Trade with clarity, not guesswork.",
     features: [
       "Everything in Signals",
-      "Daily trading plan (market bias, key levels, watchlist)",
-      "Daily trade setups",
-      "Entry & exit zones",
-      "Volatility + liquidity analysis",
+      "Live trading sessions (1–2 hour guidance)",
+      "Real-time entry & exit calls",
+      "Live PnL tracking + session results",
+      "Active decision support"
     ],
   },
   {
@@ -80,9 +86,17 @@ const PricingSection = () => {
 
             {/* Plan name + price */}
             <div className="mb-4">
-              <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
-                {plan.name}
-              </span>
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-mono text-[10px] tracking-[0.2em] text-muted-foreground uppercase">
+                  {plan.name}
+                </span>
+                {/* @ts-ignore */}
+                {plan.modeLabel && (
+                  <span className={`px-2 py-0.5 rounded font-mono text-[9px] font-bold tracking-widest ${plan.highlighted ? 'bg-primary/20 text-primary border border-primary/30' : 'bg-panel border border-border text-muted-foreground'}`}>
+                    {plan.modeLabel}
+                  </span>
+                )}
+              </div>
               <div className="mt-1 flex items-baseline gap-2">
                 <span className={`font-display text-4xl font-bold ${plan.isComingSoon ? "text-muted-foreground/60" : "text-foreground"}`}>
                   {plan.price}
@@ -91,10 +105,10 @@ const PricingSection = () => {
               </div>
             </div>
 
-            {/* Supporting line (Trader only) */}
+            {/* Supporting line */}
             {plan.supportingLine && (
               <div className="mb-4 pb-3 border-b border-border/50 text-center">
-                <span className="text-[10px] text-primary tracking-widest uppercase font-mono">
+                <span className={`text-[10px] tracking-widest uppercase font-mono ${plan.highlighted ? 'text-primary' : 'text-muted-foreground/80'}`}>
                   {plan.supportingLine}
                 </span>
               </div>
@@ -103,12 +117,20 @@ const PricingSection = () => {
             {/* Features */}
             <ul className="space-y-2 mb-6 flex-1">
               {plan.features.map((f) => (
-                <li key={f} className="flex items-start gap-2 text-xs text-muted-foreground font-mono">
+                <li key={f} className={`flex items-start gap-2 text-xs font-mono ${plan.isComingSoon ? "text-muted-foreground/40" : "text-foreground"}`}>
                   <span className={`mt-0.5 ${plan.isComingSoon ? "text-muted-foreground/40" : "text-primary"}`}>›</span>
-                  {f}
+                  <span>{f}</span>
                 </li>
               ))}
             </ul>
+
+            {/* Differentiator text block */}
+            {/* @ts-ignore */}
+            {plan.differentiator && (
+              <div className="mb-6 p-3 rounded bg-panel border gap-2 border-primary/20 text-center">
+                <p className="text-[11px] font-mono leading-relaxed text-primary/90 font-semibold">{plan.differentiator}</p>
+              </div>
+            )}
 
             {/* CTA */}
             {plan.isComingSoon ? (

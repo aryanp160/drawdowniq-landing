@@ -410,64 +410,120 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
             const closedCount   = winningTrades + losingTrades;
             const winRate       = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
 
-            // All-time avg return — every TP_HIT ever fetched
+            // All-time total return — every closed trade
             const validReturns = previousTrades
-              .filter(t => t.liveStatus === "TP_HIT")
+              .filter(t => t.liveStatus === "TP_HIT" || t.liveStatus === "SL_HIT")
               .map(t => t.finalReturn)
               .filter((n): n is number => typeof n === "number" && !isNaN(n));
-            const avgReturn = validReturns.length > 0
-              ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length).toFixed(1)
-              : "0.0";
+            const totalReturn = validReturns.reduce((a, b) => a + b, 0).toFixed(1);
 
             // Only render the first `visibleCount` rows
             const visibleTrades = previousTrades.slice(0, visibleCount);
             const hasMore       = previousTrades.length > visibleCount;
 
+            // Calculate secondary stats
+            const closedReturns = previousTrades
+              .filter(t => t.liveStatus === "TP_HIT" || t.liveStatus === "SL_HIT")
+              .map(t => t.finalReturn)
+              .filter((n): n is number => typeof n === "number" && !isNaN(n));
+
+            const winningReturns = closedReturns.filter(n => n > 0);
+            const losingReturns = closedReturns.filter(n => n < 0);
+
+            const avgWin = winningReturns.length > 0 ? (winningReturns.reduce((a, b) => a + b, 0) / winningReturns.length).toFixed(1) : "0.0";
+            const avgLoss = losingReturns.length > 0 ? (losingReturns.reduce((a, b) => a + b, 0) / losingReturns.length).toFixed(1) : "0.0";
+
+            // Calculate last 10 returns
+            const last10Returns = previousTrades
+              .filter(t => t.liveStatus === "TP_HIT" || t.liveStatus === "SL_HIT")
+              .slice(0, 10)
+              .map(t => t.finalReturn)
+              .filter((n): n is number => typeof n === "number" && !isNaN(n));
+            const last10ReturnTotal = last10Returns.length > 0 ? last10Returns.reduce((a, b) => a + b, 0).toFixed(1) : "0.0";
+            const last10Color = parseFloat(last10ReturnTotal) >= 0 ? "text-green-500" : "text-red-500/80";
+
+            const winRateColor = winRate >= 60 ? "text-green-500" : winRate >= 40 ? "text-yellow-500" : "text-foreground";
+            const returnColor = parseFloat(totalReturn) >= 0 ? "text-green-500" : parseFloat(totalReturn) < 0 ? "text-red-500" : "text-foreground";
+
             return (
               <>
                 {/* ── Header ── */}
-                <button
-                  onClick={() => setIsClosedTradesOpen(!isClosedTradesOpen)}
-                  className="w-full flex items-center justify-between px-4 py-3 rounded-t border border-border bg-panel hover:bg-panel-2/60 transition-all group"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-display font-bold text-sm text-foreground uppercase tracking-[0.18em] group-hover:text-primary transition-colors">
-                      Execution Log
-                    </span>
-                    <span className="px-1.5 py-0.5 rounded bg-border/60 text-[9px] font-mono text-muted-foreground tracking-widest">
-                      {allCount} SIGNALS
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center divide-x divide-border/40">
-                      <div className="flex flex-col items-center px-3">
-                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">Win Rate</span>
-                        <span className={`font-mono font-bold text-[10px] leading-none tabular-nums ${winRate >= 50 ? "text-green-400" : "text-red-400"}`}>
-                          {winRate}%
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center px-3">
-                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">Avg Return</span>
-                        <span className={`font-mono font-bold text-[10px] leading-none tabular-nums ${parseFloat(avgReturn) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                          {parseFloat(avgReturn) > 0 ? "+" : ""}{avgReturn}%
-                        </span>
-                      </div>
-                      <div className="flex flex-col items-center px-3">
-                        <span className="text-[7px] text-muted-foreground/50 uppercase tracking-[0.16em] leading-none mb-1 font-mono">TP / SL</span>
-                        <span className="font-mono font-bold text-[10px] leading-none tabular-nums">
-                          <span className="text-green-400">{winningTrades}</span>
-                          <span className="text-muted-foreground/40 mx-0.5">/</span>
-                          <span className="text-red-400">{losingTrades}</span>
-                        </span>
-                      </div>
+                <div className={`rounded-t border border-border bg-panel overflow-hidden transition-all ${isClosedTradesOpen ? "border-b border-b-border/10 mb-1" : ""}`}>
+                  <button
+                    onClick={() => setIsClosedTradesOpen(!isClosedTradesOpen)}
+                    className="w-full flex flex-col sm:flex-row items-start sm:items-center justify-between px-6 py-5 hover:bg-panel-2/20 transition-all select-none"
+                  >
+                    {/* LEFT ZONE */}
+                    <div className="flex flex-col items-start gap-1.5 mt-1">
+                      <span className="font-display font-bold text-2xl text-foreground uppercase tracking-[0.1em] transition-colors">
+                        Execution Log
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/45 font-mono tracking-[0.2em] uppercase font-semibold">
+                        Based on executed signals
+                      </span>
                     </div>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                      className={`text-muted-foreground/60 transition-transform duration-300 flex-shrink-0 ${isClosedTradesOpen ? "rotate-180" : ""}`}>
-                      <path d="m6 9 6 6 6-6" />
-                    </svg>
-                  </div>
-                </button>
+
+                    {/* RIGHT ZONE: Structured Blocks */}
+                    <div className="flex flex-col items-end gap-3 mt-6 sm:mt-0 w-full sm:w-auto">
+                      
+                      {/* TOP ROW: Primary Stats */}
+                      <div className="flex items-center gap-6 sm:gap-8 pr-1 py-1">
+                        
+                        {/* TRADES */}
+                        <div className="flex flex-col items-start min-w-[40px]">
+                          <span className="font-mono font-bold text-xl tabular-nums leading-none text-foreground tracking-tight">
+                            {closedCount}
+                          </span>
+                          <span className="text-[9.5px] text-muted-foreground/50 uppercase tracking-[0.18em] leading-none mt-1.5 font-mono">
+                            Trades
+                          </span>
+                        </div>
+
+                        {/* WIN RATE */}
+                        <div className="flex flex-col items-start min-w-[50px]">
+                          <span className={`font-mono font-bold text-xl tabular-nums leading-none tracking-tight ${winRateColor}`}>
+                            {winRate}%
+                          </span>
+                          <span className="text-[9.5px] text-muted-foreground/50 uppercase tracking-[0.18em] leading-none mt-1.5 font-mono">
+                            Win Rate
+                          </span>
+                        </div>
+
+                        {/* RETURN */}
+                        <div className="flex flex-col items-start min-w-[60px]">
+                          <span 
+                            className={`font-mono font-bold text-xl tabular-nums leading-none tracking-tight ${returnColor}`}
+                            style={{ textShadow: parseFloat(totalReturn) >= 0 ? "0 0 12px rgba(34,197,94,0.15)" : "0 0 12px rgba(239,68,68,0.15)" }}
+                          >
+                            {parseFloat(totalReturn) > 0 ? "+" : ""}{totalReturn}%
+                          </span>
+                          <span className="text-[9.5px] text-muted-foreground/50 uppercase tracking-[0.18em] leading-none mt-1.5 font-mono">
+                            Return
+                          </span>
+                        </div>
+
+                        {/* CHEVRON (Right bound) */}
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                          className={`text-muted-foreground/30 transition-transform duration-300 flex-shrink-0 ml-2 hidden sm:block ${isClosedTradesOpen ? "rotate-180" : ""}`}>
+                          <path d="m6 9 6 6 6-6" />
+                        </svg>
+                      </div>
+
+                      {/* BOTTOM ROW: Secondary Stats */}
+                      {closedCount > 0 && (
+                        <div className="flex items-center gap-5 sm:pr-8 opacity-90 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground/60 font-mono tracking-widest uppercase">
+                            Avg Win: <span className="font-bold text-green-500 ml-1.5">+{avgWin}%</span>
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/60 font-mono tracking-widest uppercase">
+                            Avg Loss: <span className="font-bold text-red-500 ml-1.5">{avgLoss}%</span>
+                          </span>
+                        </div>
+                      )}
+
+                    </div>
+                  </button>
+                </div>
 
                 <AnimatePresence>
                   {isClosedTradesOpen && (

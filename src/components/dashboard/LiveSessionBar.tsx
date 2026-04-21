@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, where, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export interface LiveSession {
   isActive: boolean;
+  sessionId?: string;
   startTime?: any;
   note?: string;         
   sessionNote?: string; 
@@ -23,6 +24,7 @@ export interface LiveCall {
   leverage?: number;
   status: "ACTIVE" | "CLOSED";
   finalReturn?: number;
+  return?: number; // adding return from new logic
   exitPrice?: number;
   startTime?: any;
   closedAt?: any;
@@ -94,17 +96,35 @@ const LiveSessionBar = () => {
     return () => unsub();
   }, []);
 
-  // 2. Listen to Live Call
+  // 2. Listen to Live Call (now liveTrades)
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "liveCall", "current"), (docSnap) => {
-      if (!docSnap.exists()) {
+    if (!session?.sessionId || !session?.isActive) {
+      setLiveCall(null);
+      return;
+    }
+    // Removed orderBy and limit to avoid requiring Firebase composite index
+    const q = query(
+      collection(db, "liveTrades"),
+      where("sessionId", "==", session.sessionId)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      if (snap.empty) {
         setLiveCall(null);
       } else {
-        setLiveCall(docSnap.data() as LiveCall);
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }) as any);
+        // Sort descending manually
+        docs.sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() || 0;
+          const tb = b.createdAt?.toMillis?.() || 0;
+          return tb - ta;
+        });
+        setLiveCall(docs[0] as LiveCall);
       }
+    }, (error) => {
+      console.error("Error fetching liveTrades:", error);
     });
     return () => unsub();
-  }, []);
+  }, [session?.sessionId, session?.isActive]);
 
   // 3. Live Price Polling (3-5s interval)
   useEffect(() => {
@@ -155,7 +175,8 @@ const LiveSessionBar = () => {
   const note = session?.note || session?.sessionNote;
 
   const hasActiveCall = liveCall?.status === "ACTIVE";
-  const hasClosedCall = liveCall?.status === "CLOSED" && liveCall?.finalReturn != null;
+  const finalReturnValue = liveCall?.return != null ? liveCall.return : liveCall?.finalReturn;
+  const hasClosedCall = liveCall?.status === "CLOSED" && finalReturnValue != null;
 
   const isLong = liveCall?.direction === "LONG" || liveCall?.direction === "BUY";
   const displayDirection = liveCall?.direction || "LONG";
@@ -163,13 +184,13 @@ const LiveSessionBar = () => {
 
   // Live P&L Calculation
   let liveReturn: number | null = null;
-  // Calculate return only if entry is locked
-  if (hasActiveCall && livePrice && liveCall.entryPrice && liveCall.entryLocked === true) {
+  // Calculate return since entryPrice is implicitly locked in liveTrades
+  if (hasActiveCall && livePrice && liveCall.entryPrice) {
     liveReturn = calcReturn(liveCall.direction, liveCall.entryPrice, livePrice, leverageVal);
   }
   
   const liveReturnPositive = liveReturn != null && liveReturn >= 0;
-  const closedReturnPositive = liveCall?.finalReturn != null && liveCall.finalReturn >= 0;
+  const closedReturnPositive = finalReturnValue != null && finalReturnValue >= 0;
 
   // Progress Bar calculation
   let progressPos = 0;
@@ -360,7 +381,7 @@ const LiveSessionBar = () => {
                     className={`font-mono font-bold text-4xl sm:text-5xl tabular-nums tracking-tighter leading-[0.85] ${closedReturnPositive ? "text-green-400" : "text-red-400"}`}
                     style={{ textShadow: closedReturnPositive ? "0 0 24px rgba(74,222,128,0.35)" : "0 0 24px rgba(248,113,113,0.35)" }}
                   >
-                    {closedReturnPositive ? "+" : ""}{liveCall.finalReturn!.toFixed(2)}%
+                    {closedReturnPositive ? "+" : ""}{finalReturnValue!.toFixed(2)}%
                   </span>
                   <span className="font-mono text-[9px] text-muted-foreground/40 uppercase tracking-[0.2em] font-bold">
                     Result

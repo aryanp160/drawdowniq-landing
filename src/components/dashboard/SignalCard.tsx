@@ -98,11 +98,25 @@ const SignalCard = ({
   const statusKey = finalStatus as keyof typeof statusConfig;
   const sc = statusConfig[statusKey] ?? statusConfig.RUNNING;
 
+  const hoverFx = isLong ? "hover:border-green-500/30 hover:shadow-[0_0_20px_rgba(34,197,94,0.08)]" : "hover:border-red-500/30 hover:shadow-[0_0_20px_rgba(239,68,68,0.08)]";
+
   return (
     <motion.div
-      className={`panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all ${isBlurred ? "blur-[5px] opacity-40 select-none pointer-events-none" : "hover:bg-panel-2/30"}`}
-      whileHover={{ y: isBlurred ? 0 : -2 }}
+      className={`group panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all duration-300 ${isBlurred ? "blur-[5px] opacity-40 select-none pointer-events-none" : `hover:bg-panel-2/30 ${hoverFx}`}`}
+      whileHover={{ y: isBlurred ? 0 : -4, scale: isBlurred ? 1 : 1.01 }}
+      transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
+      <style>
+        {`
+          @keyframes slide-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+          }
+          .animate-slide-shimmer {
+            animation: slide-shimmer 4s infinite linear;
+          }
+        `}
+      </style>
       {/* ── TOP ROW: Asset | Direction | Confidence | Leverage | Timer ── */}
       <div className="flex items-start justify-between border-b border-border/50 pb-2.5">
         <div className="flex flex-col gap-2">
@@ -200,7 +214,13 @@ const SignalCard = ({
         </div>
 
         {/* Track */}
-        <div className={`relative h-1.5 rounded-full overflow-visible flex items-center transition-opacity ${isUnavailable ? "opacity-40" : "opacity-100"}`} style={{ background: "var(--panel-2, #1a1a2e)" }}>
+        <div className={`relative h-1.5 rounded-full overflow-hidden flex items-center transition-opacity ${isUnavailable ? "opacity-40" : "opacity-100"}`} style={{ background: "var(--panel-2, #1a1a2e)" }}>
+          
+          {/* Animated Glow on Hover */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none z-0">
+             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent w-full h-full animate-slide-shimmer" />
+          </div>
+
           {/* Left zone — SL side (red) */}
           <div
             className="absolute h-full rounded-l-full bg-destructive/50"
@@ -241,7 +261,7 @@ const SignalCard = ({
 
         {!isBlurred && finalReturn != null && (
           <div className="flex flex-col items-end gap-0.5">
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right">
               <span
                 className={`text-[17px] font-semibold tabular-nums leading-none tracking-tight ${
                   finalReturn === "—"
