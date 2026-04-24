@@ -210,7 +210,7 @@ const Terminal = () => {
           </div>
         )}
 
-        <LiveSessionBar />
+        {isTraderOrElite && <LiveSessionBar />}
         <DashboardGrid variant="real" isLocked={!isActive} />
 
         </div>

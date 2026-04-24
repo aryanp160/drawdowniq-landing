@@ -59,10 +59,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               expiresAt: null,
               createdAt: serverTimestamp(),
             };
-            setDoc(userRef, newProfile).then(() => {
-              setUserProfile(newProfile);
-              setLoading(false);
-            });
+            setDoc(userRef, newProfile)
+              .then(() => {
+                setUserProfile(newProfile);
+                setLoading(false);
+              })
+              .catch((err) => {
+                console.error("Error creating user profile:", err);
+                setUserProfile(newProfile);
+                setLoading(false);
+              });
           }
         });
         return () => unsubscribeProfile();

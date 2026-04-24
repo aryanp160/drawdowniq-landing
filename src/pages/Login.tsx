@@ -23,7 +23,12 @@ const Login = () => {
       }
       navigate('/terminal');
     } catch (err: any) {
-      toast.error(err.message || "Failed to authenticate");
+      let msg = "Failed to authenticate";
+      if (err.code === "auth/email-already-in-use") msg = "This email is already registered.";
+      if (err.code === "auth/invalid-credential") msg = "Invalid email or password.";
+      if (err.code === "auth/weak-password") msg = "Password must be at least 6 characters.";
+      if (err.code === "auth/invalid-email") msg = "Invalid email address format.";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
