@@ -378,8 +378,8 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
       {/* ── Signal grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5 lg:auto-rows-fr">
-        {filteredTrades.map((trade, i) => {
-          const blurred = isLocked && i >= 2;
+        {(isLocked ? filteredTrades.slice(0, 3) : filteredTrades).map((trade, i) => {
+          const blurred = isLocked && i === 2;
           return (
             <SignalCard
               key={trade.id}
@@ -417,9 +417,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
               .filter((n): n is number => typeof n === "number" && !isNaN(n));
             const totalReturn = validReturns.reduce((a, b) => a + b, 0).toFixed(1);
 
-            // Only render the first `visibleCount` rows
-            const visibleTrades = previousTrades.slice(0, visibleCount);
-            const hasMore       = previousTrades.length > visibleCount;
+            // Limit to 5 for landing page/locked, otherwise use visibleCount
+            const effectiveVisibleCount = isLocked ? 5 : visibleCount;
+            const visibleTrades = previousTrades.slice(0, effectiveVisibleCount);
+            const hasMore       = !isLocked && previousTrades.length > visibleCount;
 
             // Calculate secondary stats
             const closedReturns = previousTrades
@@ -671,15 +672,15 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
       )}
 
 
-
       {isLocked && (
-        <div className="absolute bottom-0 left-0 right-0 h-[60%] bg-gradient-to-t from-background via-background/90 to-transparent z-10 flex flex-col items-center justify-end pb-12 pointer-events-auto">
+        <div className="mt-12 mb-4 flex flex-col items-center justify-center pointer-events-auto">
           <Link to="/pricing" className="px-8 py-3 bg-primary text-primary-foreground font-mono text-sm tracking-widest rounded font-semibold hover:brightness-110 transition-all shadow-xl shadow-primary/20 hover:-translate-y-1">
             UNLOCK ALL TERMINAL SIGNALS
           </Link>
           <p className="text-xs font-mono text-muted-foreground mt-4 uppercase tracking-wider">Active plan upgrade required</p>
         </div>
       )}
+
     </motion.div>
   );
 };

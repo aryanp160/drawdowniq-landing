@@ -103,7 +103,7 @@ const SignalCard = ({
 
   return (
     <motion.div
-      className={`group panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all duration-300 ${isBlurred ? "blur-[5px] opacity-40 select-none pointer-events-none" : `hover:bg-panel-2/30 ${hoverFx}`}`}
+      className={`group panel-glow p-4 flex flex-col gap-3 rounded border border-border bg-panel text-[13px] font-mono transition-all duration-300 ${isBlurred ? "blur-[2px] opacity-40 select-none pointer-events-none" : `hover:bg-panel-2/30 ${hoverFx}`}`}
       whileHover={{ y: isBlurred ? 0 : -4, scale: isBlurred ? 1 : 1.01 }}
       transition={{ type: "spring", stiffness: 300, damping: 20 }}
     >
@@ -124,19 +124,19 @@ const SignalCard = ({
           {/* Asset + Direction */}
           <div className="flex items-center gap-2">
             <span className="font-display font-bold text-[22px] text-foreground leading-none tracking-tight">
-              {isBlurred ? "***" : asset}
+              {asset}
             </span>
             <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold leading-none ${isLong ? 'bg-primary/20 text-primary' : 'bg-destructive/20 text-destructive'}`}>
-              {isBlurred ? "---" : direction}
+              {direction}
             </span>
           </div>
           {/* Confidence | R:R | Leverage */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">Conf</span>
-            <span className="text-sm font-semibold text-foreground leading-none">{isBlurred ? "--" : confidence}</span>
+            <span className="text-sm font-semibold text-foreground leading-none">{confidence}</span>
             <span className="text-muted-foreground/40 leading-none">|</span>
             <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">R:R</span>
-            <span className="text-sm font-semibold text-foreground leading-none">{isBlurred ? "-.-" : `1:${riskReward}`}</span>
+            <span className="text-sm font-semibold text-foreground leading-none">{`1:${riskReward}`}</span>
             <span className="text-muted-foreground/40 leading-none">|</span>
             <span className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none">Lev</span>
             <span className="text-sm font-semibold text-foreground leading-none">{leverage}x</span>
@@ -144,7 +144,7 @@ const SignalCard = ({
         </div>
 
         {/* Expected/Final Return (Top Right) */}
-        {!isBlurred && finalReturn != null && (
+        {finalReturn != null && (
           <div className="flex flex-col items-end gap-1.5">
             <div className="flex items-center gap-1.5 group-hover:brightness-125 group-hover:scale-[1.03] transition-all duration-300 origin-right">
               <span
@@ -187,7 +187,7 @@ const SignalCard = ({
         <div className="flex flex-col gap-1.5 items-center">
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Stop Loss</span>
           <span className="text-[15px] text-red-500 font-bold leading-none tracking-tight">
-            {isBlurred ? "-.--" : `$${fmt(sl)}`}
+            {`$${fmt(sl)}`}
           </span>
         </div>
 
@@ -198,7 +198,7 @@ const SignalCard = ({
         <div className="flex flex-col gap-1.5 items-center">
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Entry</span>
           <span className="text-[14px] text-white font-bold leading-none tracking-tight">
-            {isBlurred ? "-.--" : entryLow === entryHigh ? `$${fmt(entryLow)}` : `$${fmt(entryLow)} — $${fmt(entryHigh)}`}
+            {entryLow === entryHigh ? `$${fmt(entryLow)}` : `$${fmt(entryLow)} — $${fmt(entryHigh)}`}
           </span>
         </div>
 
@@ -209,7 +209,7 @@ const SignalCard = ({
         <div className="flex flex-col gap-1.5 items-center">
           <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none">Take Profit</span>
           <span className="text-[15px] text-green-500 font-bold leading-none tracking-tight">
-            {isBlurred ? "-.--" : `$${fmt(tp)}`}
+            {`$${fmt(tp)}`}
           </span>
         </div>
       </div>
@@ -227,7 +227,7 @@ const SignalCard = ({
           <div className="absolute h-full rounded-r-full bg-green-500/70" style={{ left: `${Math.max(entryLowPos, entryHighPos)}%`, right: 0 }} />
 
           {/* Price tracker */}
-          {!isBlurred && pricePct != null && (
+          {pricePct != null && (
             <div className={`absolute w-[2px] h-2 rounded bg-white transition-all duration-700 ${isClosed ? 'opacity-50' : 'opacity-100'}`} style={{ left: `calc(${pricePct}% - 1px)` }} />
           )}
         </div>
@@ -235,9 +235,7 @@ const SignalCard = ({
 
       {/* ── CURRENT PRICE ── */}
       <div className="text-[10px] text-muted-foreground mt-0.5 px-0.5 flex items-center">
-        {isBlurred ? (
-          <span>Price: —</span>
-        ) : isClosed ? (
+        {isClosed ? (
           <span className="flex items-center gap-1.5">
             <span className="text-muted-foreground/60">Exit Price:</span>
             {exitPrice != null ? (
@@ -262,13 +260,13 @@ const SignalCard = ({
         <div className="flex items-center gap-1.5">
           <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`} />
           <span className={`text-[10px] uppercase tracking-widest font-bold ${sc.color}`}>
-            {isBlurred ? "UNKNOWN" : sc.label.replace(/^[^\s]+ /, "")}
+            {sc.label.replace(/^[^\s]+ /, "")}
           </span>
         </div>
 
         <div className={`flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold tracking-widest uppercase ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning/10 border border-warning/20 text-warning' : 'bg-panel-2 border border-border/50 text-muted-foreground opacity-60'}`}>
           <span className={`w-1.5 h-1.5 rounded-full ${finalStatus === 'RUNNING' && timeLeft !== 'Expired' ? 'bg-warning animate-pulse' : 'bg-muted-foreground'}`} />
-          {isBlurred ? "--h --m" : timeLeft}
+          {timeLeft}
         </div>
       </div>
     </motion.div>
