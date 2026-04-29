@@ -56,14 +56,7 @@ function contextLine(bias: "Bullish" | "Bearish" | "Neutral", vol: string, count
 
 const Terminal = () => {
   const { currentUser, userProfile, loading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!loading && !currentUser) navigate("/login");
-  }, [currentUser, loading, navigate]);
-
-  if (loading || !currentUser) return null;
-
+  
   const isActive        = userProfile?.subscriptionStatus === "active";
   const isTraderOrElite = isActive && (userProfile?.plan === "trader" || userProfile?.plan === "elite");
 

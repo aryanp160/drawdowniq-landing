@@ -16,7 +16,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!currentUser) return <Navigate to="/login" replace />;
   return children;
 };
-
 const queryClient = new QueryClient();
 
 const App = () => (

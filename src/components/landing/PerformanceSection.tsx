@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, orderBy, limit, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface ClosedSignal {
@@ -7,42 +7,72 @@ interface ClosedSignal {
   asset: string;
   direction: string;
   finalReturn: number;
-  closedAt: any;
+  closedAt: string;
   status: "TP_HIT" | "SL_HIT";
 }
+
+const CACHE_KEY = "quantiq_performance_cache";
 
 const PerformanceSection = () => {
   const [signals, setSignals] = useState<ClosedSignal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Query only closed trades that have a stored finalReturn
-    const q = query(
-      collection(db, "signals"),
-      where("status", "in", ["TP_HIT", "SL_HIT"]),
-      orderBy("closedAt", "desc"),
-      limit(5)
-    );
+    const fetchPerformanceData = async () => {
+      try {
+        setLoading(true);
+        const q = query(
+          collection(db, "signals"),
+          orderBy("timestamp", "desc"),
+          limit(30)
+        );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      const fetched: ClosedSignal[] = snap.docs
-        .map(doc => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            asset:       d.asset,
-            direction:   d.direction,
-            finalReturn: typeof d.finalReturn === "number" ? d.finalReturn : null,
-            closedAt:    d.closedAt,
-            status:      d.status,
-          };
-        })
-        .filter(s => s.finalReturn != null) as ClosedSignal[];
-      setSignals(fetched);
-      setLoading(false);
-    }, () => setLoading(false));
+        const snap = await getDocs(q);
+        
+        const fetched: ClosedSignal[] = snap.docs
+          .map(doc => {
+            const d = doc.data();
+            let dateStr = new Date().toISOString();
+            if (d.closedAt?.toDate) {
+              dateStr = d.closedAt.toDate().toISOString();
+            } else if (d.closedAt) {
+              dateStr = new Date(d.closedAt).toISOString();
+            }
 
-    return () => unsubscribe();
+            return {
+              id: doc.id,
+              asset:       d.asset,
+              direction:   d.direction,
+              finalReturn: typeof d.finalReturn === "number" ? d.finalReturn : null,
+              closedAt:    dateStr,
+              rawClosedAt: d.closedAt?.toDate ? d.closedAt.toDate().getTime() : (d.closedAt ? new Date(d.closedAt).getTime() : 0),
+              status:      d.status,
+            };
+          })
+          .filter(s => (s.status === "TP_HIT" || s.status === "SL_HIT") && s.finalReturn != null && s.rawClosedAt > 0)
+          .sort((a, b) => b.rawClosedAt - a.rawClosedAt)
+          .slice(0, 5) as ClosedSignal[];
+
+        console.log("Fresh fetch success:", fetched.length);
+        setSignals(fetched);
+        localStorage.setItem(CACHE_KEY, JSON.stringify(fetched));
+        
+      } catch (err) {
+        console.warn("Fetch failed, using cache", err);
+        try {
+          const cached = localStorage.getItem(CACHE_KEY);
+          if (cached) {
+            setSignals(JSON.parse(cached));
+          }
+        } catch (cacheErr) {
+          console.warn("Failed to parse performance cache", cacheErr);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPerformanceData();
   }, []);
 
   const wins    = signals.filter(s => s.status === "TP_HIT").length;
@@ -96,7 +126,7 @@ const PerformanceSection = () => {
         ) : (
           signals.map((s) => {
             const isWin  = s.status === "TP_HIT";
-            const dateObj = s.closedAt?.toDate ? s.closedAt.toDate() : new Date();
+            const dateObj = new Date(s.closedAt);
             const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
             return (
