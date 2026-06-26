@@ -1,6 +1,4 @@
-<div align="center">
-  <img src="public/banner.png" alt="DrawdownIQ Banner" width="100%" />
-</div>
+
 
 # DrawdownIQ - Quantitative Risk Intelligence
 
@@ -65,13 +63,10 @@ Welcome to **DrawdownIQ**, a high-performance quantitative trading terminal buil
 ## 🏛️ Architecture
 
 <div align="center">
-  <img src="public/architecture.png" alt="DrawdownIQ Architecture Diagram" width="100%" />
+  <img src="public/architecture_flowchart.png" alt="DrawdownIQ Architecture Diagram" width="100%" />
 </div>
 
-The system follows a modern serverless architecture pattern:
-- The **Vite + React** client directly subscribes to **Firestore** streams.
-- **Firebase Auth** manages user sessions and RBAC (Role-Based Access Control) for subscription tiers.
-- A direct integration with the **Binance API** handles real-time ticker data processing locally in the client for performance.
+DrawdownIQ follows a decoupled architecture where an external quantitative trading model continuously generates trading signals and writes them to Firebase Firestore. The React dashboard subscribes to Firestore using real-time `onSnapshot` listeners, enabling instant updates without polling. Live market prices are fetched from the Binance API to calculate current PnL and display execution progress.
 
 ---
 
