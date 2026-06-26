@@ -132,7 +132,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
           } catch (e) {
             console.warn(`Binance fetch failed for ${asset}:`, e);
           }
-          
+
           // Failed to fetch or asset unavailable
           return { asset, price: 0, available: false };
         })
@@ -252,8 +252,8 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
       // Direction
       if (filterDir !== "all" && t.direction !== filterDir) return false;
       // Leverage
-      if (filterLev === "low"  && t.leverage >= 5)  return false;
-      if (filterLev === "mid"  && (t.leverage < 5 || t.leverage > 10)) return false;
+      if (filterLev === "low" && t.leverage >= 5) return false;
+      if (filterLev === "mid" && (t.leverage < 5 || t.leverage > 10)) return false;
       if (filterLev === "high" && t.leverage <= 10) return false;
       return true;
     });
@@ -297,11 +297,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
             <button
               id="signal-filter-btn"
               onClick={() => setFilterOpen(v => !v)}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded border text-[11px] font-mono font-bold uppercase tracking-widest transition-all ${
-                filterOpen || activeFilterCount > 0
+              className={`flex items-center gap-1.5 px-3 py-2 rounded border text-[11px] font-mono font-bold uppercase tracking-widest transition-all ${filterOpen || activeFilterCount > 0
                   ? "border-primary/60 bg-primary/10 text-primary shadow-[0_0_8px_rgba(99,102,241,0.15)]"
                   : "border-border bg-panel text-muted-foreground hover:border-border/80 hover:text-foreground"
-              }`}
+                }`}
             >
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                 <path d="M3 6h18M7 12h10M11 18h2" />
@@ -324,11 +323,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                       <button
                         key={v}
                         onClick={() => setFilterDir(v)}
-                        className={`flex-1 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-widest border transition-all ${
-                          filterDir === v
+                        className={`flex-1 py-1 rounded text-[9px] font-mono font-bold uppercase tracking-widest border transition-all ${filterDir === v
                             ? v === "LONG" ? "border-primary/60 bg-primary/10 text-primary" : v === "SHORT" ? "border-destructive/60 bg-destructive/10 text-destructive" : "border-border bg-panel-2 text-foreground"
                             : "border-border/50 bg-transparent text-muted-foreground hover:text-foreground"
-                        }`}
+                          }`}
                       >
                         {v === "all" ? "All" : v}
                       </button>
@@ -341,19 +339,18 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                   <p className="text-[8px] text-muted-foreground uppercase tracking-[0.15em] font-mono mb-1.5">Leverage</p>
                   <div className="flex flex-col gap-1">
                     {([
-                      { val: "all",  label: "All" },
-                      { val: "low",  label: "Low  (<5x)" },
-                      { val: "mid",  label: "Med  (5–10x)" },
+                      { val: "all", label: "All" },
+                      { val: "low", label: "Low  (<5x)" },
+                      { val: "mid", label: "Med  (5–10x)" },
                       { val: "high", label: "High (>10x)" },
                     ] as const).map(({ val, label }) => (
                       <button
                         key={val}
                         onClick={() => setFilterLev(val)}
-                        className={`text-left px-2 py-1 rounded text-[10px] font-mono border transition-all ${
-                          filterLev === val
+                        className={`text-left px-2 py-1 rounded text-[10px] font-mono border transition-all ${filterLev === val
                             ? "border-primary/50 bg-primary/10 text-primary"
                             : "border-transparent text-muted-foreground hover:text-foreground hover:bg-panel-2/50"
-                        }`}
+                          }`}
                       >
                         {label}
                       </button>
@@ -404,11 +401,11 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
       {!isLocked && previousTrades.length > 0 && (
         <div className="mt-8 border-t border-border/50 pt-6 reveal-up">
           {(() => {
-            const allCount      = previousTrades.length;
+            const allCount = previousTrades.length;
             const winningTrades = previousTrades.filter(t => t.liveStatus === "TP_HIT").length;
-            const losingTrades  = previousTrades.filter(t => t.liveStatus === "SL_HIT").length;
-            const closedCount   = winningTrades + losingTrades;
-            const winRate       = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
+            const losingTrades = previousTrades.filter(t => t.liveStatus === "SL_HIT").length;
+            const closedCount = winningTrades + losingTrades;
+            const winRate = closedCount > 0 ? Math.round((winningTrades / closedCount) * 100) : 0;
 
             // All-time total return — every closed trade
             const validReturns = previousTrades
@@ -420,7 +417,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
             // Limit to 5 for landing page/locked, otherwise use visibleCount
             const effectiveVisibleCount = isLocked ? 5 : visibleCount;
             const visibleTrades = previousTrades.slice(0, effectiveVisibleCount);
-            const hasMore       = !isLocked && previousTrades.length > visibleCount;
+            const hasMore = !isLocked && previousTrades.length > visibleCount;
 
             // Calculate secondary stats
             const closedReturns = previousTrades
@@ -466,10 +463,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
                     {/* RIGHT ZONE: Structured Blocks */}
                     <div className="flex flex-col items-end gap-3 mt-6 sm:mt-0 w-full sm:w-auto">
-                      
+
                       {/* TOP ROW: Primary Stats */}
                       <div className="flex items-center gap-6 sm:gap-8 pr-1 py-1">
-                        
+
                         {/* TRADES */}
                         <div className="flex flex-col items-start min-w-[40px]">
                           <span className="font-mono font-bold text-xl tabular-nums leading-none text-foreground tracking-tight">
@@ -492,7 +489,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
 
                         {/* RETURN */}
                         <div className="flex flex-col items-start min-w-[60px]">
-                          <span 
+                          <span
                             className={`font-mono font-bold text-xl tabular-nums leading-none tracking-tight ${returnColor}`}
                             style={{ textShadow: parseFloat(totalReturn) >= 0 ? "0 0 12px rgba(34,197,94,0.15)" : "0 0 12px rgba(239,68,68,0.15)" }}
                           >
@@ -545,22 +542,22 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                       {/* Rows */}
                       <div className="flex flex-col border-x border-b border-border rounded-b overflow-hidden">
                         {visibleTrades.map((trade, idx) => {
-                          const isWin     = trade.liveStatus === "TP_HIT";
-                          const isLoss    = trade.liveStatus === "SL_HIT";
+                          const isWin = trade.liveStatus === "TP_HIT";
+                          const isLoss = trade.liveStatus === "SL_HIT";
                           const isExpired = trade.liveStatus === "EXPIRED";
 
-                          const refTs   = isExpired ? (trade.validUntil ?? trade.timestamp) : (trade.closedAt ?? trade.timestamp);
+                          const refTs = isExpired ? (trade.validUntil ?? trade.timestamp) : (trade.closedAt ?? trade.timestamp);
                           const dateObj = refTs?.toDate ? refTs.toDate() : new Date();
                           const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
                           const timeStr = dateObj.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
 
                           const returnNum = isWin && typeof trade.finalReturn === "number" ? trade.finalReturn : null;
-                          const barColor  = isWin ? "bg-green-500/80" : isLoss ? "bg-red-500/80" : "bg-border/40";
-                          const hoverBg   = isWin
+                          const barColor = isWin ? "bg-green-500/80" : isLoss ? "bg-red-500/80" : "bg-border/40";
+                          const hoverBg = isWin
                             ? "hover:bg-green-500/[0.035] hover:shadow-[inset_0_0_24px_rgba(74,222,128,0.04)]"
                             : isLoss
-                            ? "hover:bg-red-500/[0.035] hover:shadow-[inset_0_0_24px_rgba(248,113,113,0.04)]"
-                            : "hover:bg-panel-2/40";
+                              ? "hover:bg-red-500/[0.035] hover:shadow-[inset_0_0_24px_rgba(248,113,113,0.04)]"
+                              : "hover:bg-panel-2/40";
 
                           return (
                             <div
@@ -576,11 +573,10 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                                 <span className="font-display font-bold text-[14px] text-foreground tracking-tight leading-none w-14 shrink-0">
                                   {trade.asset}
                                 </span>
-                                <span className={`text-[8px] font-bold tracking-widest uppercase leading-none px-1.5 py-0.5 rounded border ${
-                                  trade.direction === "LONG" || trade.direction === "BUY"
+                                <span className={`text-[8px] font-bold tracking-widest uppercase leading-none px-1.5 py-0.5 rounded border ${trade.direction === "LONG" || trade.direction === "BUY"
                                     ? "text-primary border-primary/30 bg-primary/5"
                                     : "text-red-400 border-red-400/30 bg-red-400/5"
-                                }`}>
+                                  }`}>
                                   {trade.direction}
                                 </span>
                               </div>
@@ -592,7 +588,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                                     className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-green-400 bg-green-500/10 border border-green-500/20"
                                     style={{ boxShadow: "0 0 8px rgba(74,222,128,0.14)" }}
                                   >
-                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 6 3 3 5-5"/></svg>
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 6 3 3 5-5" /></svg>
                                     TP HIT
                                   </span>
                                 ) : isLoss ? (
@@ -600,12 +596,12 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                                     className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-red-400 bg-red-500/10 border border-red-500/20"
                                     style={{ boxShadow: "0 0 8px rgba(248,113,113,0.14)" }}
                                   >
-                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 2 8 8M10 2 2 10"/></svg>
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="m2 2 8 8M10 2 2 10" /></svg>
                                     SL HIT
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-widest px-2 py-1 rounded text-muted-foreground/40 bg-transparent border border-border/30">
-                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="6" cy="6" r="4.5"/><path d="M6 3.5V6l1.5 1.5"/></svg>
+                                    <svg className="w-2.5 h-2.5 shrink-0" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth={2}><circle cx="6" cy="6" r="4.5" /><path d="M6 3.5V6l1.5 1.5" /></svg>
                                     EXPIRED
                                   </span>
                                 )}
@@ -655,7 +651,7 @@ const DashboardGrid = ({ variant = "preview", className = "", isLocked = false }
                               onClick={() => setVisibleCount(c => c + 10)}
                               className="w-full py-2.5 text-[9px] font-mono font-bold uppercase tracking-widest text-muted-foreground/50 hover:text-primary transition-colors flex items-center justify-center gap-1.5"
                             >
-                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12l7 7 7-7" /></svg>
                               Load {Math.min(10, previousTrades.length - visibleCount)} more
                               <span className="text-muted-foreground/30">({previousTrades.length - visibleCount} remaining)</span>
                             </button>

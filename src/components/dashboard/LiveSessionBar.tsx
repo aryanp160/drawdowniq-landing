@@ -9,8 +9,8 @@ export interface LiveSession {
   isActive: boolean;
   sessionId?: string;
   startTime?: any;
-  note?: string;         
-  sessionNote?: string; 
+  note?: string;
+  sessionNote?: string;
   updatedAt?: any;
 }
 
@@ -18,7 +18,7 @@ export interface LiveCall {
   asset: string;
   direction: "LONG" | "SHORT";
   entryPrice: number;
-  entryLocked?: boolean; 
+  entryLocked?: boolean;
   sl?: number;
   tp?: number;
   leverage?: number;
@@ -55,7 +55,7 @@ function calcReturn(direction: string, entry: number, current: number, leverage:
 
 function fmtPrice(n: number): string {
   if (n >= 10_000) return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
-  if (n >= 100)    return n.toFixed(2);
+  if (n >= 100) return n.toFixed(2);
   return n.toFixed(4);
 }
 
@@ -74,14 +74,14 @@ function fmtDuration(startTs: any, endTs?: any): string {
 // ── Component ──────────────────────────────────────────────────────────────
 
 const LiveSessionBar = () => {
-  const [session, setSession]     = useState<LiveSession | null>(null);
-  const [liveCall, setLiveCall]   = useState<LiveCall | null>(null);
-  const [loading, setLoading]     = useState(true);
+  const [session, setSession] = useState<LiveSession | null>(null);
+  const [liveCall, setLiveCall] = useState<LiveCall | null>(null);
+  const [loading, setLoading] = useState(true);
   const [livePrice, setLivePrice] = useState<number | null>(null);
-  const [elapsed, setElapsed]     = useState("—");
-  
-  const priceIntervalRef          = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedIntervalRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [elapsed, setElapsed] = useState("—");
+
+  const priceIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 1. Listen to Live Session
   useEffect(() => {
@@ -188,7 +188,7 @@ const LiveSessionBar = () => {
   if (hasActiveCall && livePrice && liveCall.entryPrice) {
     liveReturn = calcReturn(liveCall.direction, liveCall.entryPrice, livePrice, leverageVal);
   }
-  
+
   const liveReturnPositive = liveReturn != null && liveReturn >= 0;
   const closedReturnPositive = finalReturnValue != null && finalReturnValue >= 0;
 
@@ -215,7 +215,7 @@ const LiveSessionBar = () => {
         {/* ─── ACTIVE SESSION ──────────────────────────────────────────────── */}
         {isActiveSession ? (
           <div className="rounded border border-border/40 bg-panel shadow-2xl overflow-hidden flex flex-col">
-            
+
             {/* Session Header Strip */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-border/25 bg-red-500/[0.04]">
               <div className="flex items-center gap-3">
@@ -293,14 +293,14 @@ const LiveSessionBar = () => {
                         <span>TP {fmtPrice(liveCall!.tp)}</span>
                       </div>
                       <div className="h-1.5 bg-panel-2 rounded-full w-full relative overflow-hidden border border-border/25">
-                         <div 
-                           className={`absolute top-0 bottom-0 left-0 ${liveReturnPositive ? 'bg-green-500/20' : 'bg-red-500/20'} transition-all duration-700 ease-out`}
-                           style={{ width: `${progressPos}%` }}
-                         />
-                         <div 
-                           className={`absolute top-0 bottom-0 w-1 rounded-full ${liveReturnPositive ? 'bg-green-400' : 'bg-red-400'} transition-all duration-700 ease-out`}
-                           style={{ left: `${progressPos}%`, transform: 'translateX(-50%)', boxShadow: liveReturnPositive ? "0 0 6px rgba(74,222,128,0.8)" : "0 0 6px rgba(248,113,113,0.8)" }}
-                         />
+                        <div
+                          className={`absolute top-0 bottom-0 left-0 ${liveReturnPositive ? 'bg-green-500/20' : 'bg-red-500/20'} transition-all duration-700 ease-out`}
+                          style={{ width: `${progressPos}%` }}
+                        />
+                        <div
+                          className={`absolute top-0 bottom-0 w-1 rounded-full ${liveReturnPositive ? 'bg-green-400' : 'bg-red-400'} transition-all duration-700 ease-out`}
+                          style={{ left: `${progressPos}%`, transform: 'translateX(-50%)', boxShadow: liveReturnPositive ? "0 0 6px rgba(74,222,128,0.8)" : "0 0 6px rgba(248,113,113,0.8)" }}
+                        />
                       </div>
                     </div>
                   )}
@@ -324,15 +324,15 @@ const LiveSessionBar = () => {
         ) : (
           /* ─── NO ACTIVE SESSION ─────────────────────────────────────────── */
           <div className="flex flex-col px-4 py-3 opacity-60 gap-1 mt-2">
-             <div className="flex items-center gap-3">
-               <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
-               <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em] font-semibold">
-                 NO ACTIVE SESSION
-               </span>
-             </div>
-             <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest pl-4">
-               Next session will begin soon
-             </span>
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+              <span className="font-mono text-[11px] text-muted-foreground uppercase tracking-[0.18em] font-semibold">
+                NO ACTIVE SESSION
+              </span>
+            </div>
+            <span className="font-mono text-[9px] text-muted-foreground/60 uppercase tracking-widest pl-4">
+              Next session will begin soon
+            </span>
           </div>
         )}
 
@@ -347,7 +347,7 @@ const LiveSessionBar = () => {
               <span className="font-mono text-[9px] text-muted-foreground/50 uppercase tracking-[0.2em] font-bold">
                 LAST TRADE RESULT
               </span>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-3">
@@ -359,14 +359,14 @@ const LiveSessionBar = () => {
                       {leverageVal}x
                     </span>
                   </div>
-                  
+
                   <div className="font-mono text-[11px] text-muted-foreground mt-1 flex items-center gap-4 uppercase tracking-widest opacity-80">
                     {liveCall.entryPrice && liveCall.exitPrice ? (
                       <span>{fmtPrice(liveCall.entryPrice)} → {fmtPrice(liveCall.exitPrice)}</span>
                     ) : liveCall.entryPrice ? (
                       <span>Entry: {fmtPrice(liveCall.entryPrice)}</span>
                     ) : null}
-                    
+
                     {liveCall.startTime && liveCall.closedAt && (
                       <>
                         <span className="text-border">|</span>
@@ -375,7 +375,7 @@ const LiveSessionBar = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col items-end shrink-0 gap-1">
                   <span
                     className={`font-mono font-bold text-4xl sm:text-5xl tabular-nums tracking-tighter leading-[0.85] ${closedReturnPositive ? "text-green-400" : "text-red-400"}`}
